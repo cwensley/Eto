@@ -17,7 +17,7 @@
     <Compile Include="..\Shared\EnumerableExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\LICENSE.txt">
+    <Content Include="..\..\LICENSE.txt" PackageCopyToOutput="False" Pack="True" PackagePath="$(PackageLicenseFile)">
       <Link>Eto-LICENSE.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

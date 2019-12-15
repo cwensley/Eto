@@ -46,9 +46,5 @@ https://github.com/picoe/Eto/wiki
     <None Include="$(MSBuildThisFileDirectory)Eto.Forms.targets" Pack="true">
       <PackagePath>build\</PackagePath>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)..\..\LICENSE.txt">
-      <Pack>true</Pack>
-      <PackagePath>$(PackageLicenseFile)</PackagePath>
-    </None>
   </ItemGroup>
 </Project>
