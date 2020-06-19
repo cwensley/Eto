@@ -13,7 +13,6 @@
   <Target Name="PrintInfo" Condition="$(PrintInfo) != 'False'">
     <PropertyGroup>
       <PrintInfo>False</PrintInfo>
-      <BuildVersion Condition="$(Branch.StartsWith('refs/tags/'))">$(Branch.Substring(10))</BuildVersion>
     </PropertyGroup>
     <Message Text="Building:" Importance="high" />
     <Message Text="  Configuration: $(Configuration)" Importance="high" />
@@ -46,7 +45,7 @@
 
     <FileUpdate Files="$(BasePath)build\Common.props"
       WarnOnNoUpdate="true"
-      Pattern='(?&lt;=&lt;InformationalVersion\\s*[^&gt;]+?&gt;)[^&lt;]+(?=&lt;/InformationalVersion&gt;)'
+      Pattern='(?&lt;=&lt;InformationalVersion&gt;)[^&lt;]*(?=&lt;/InformationalVersion&gt;)'
       Replacement='$(AssemblyInformationalVersion)' />
 
     <FileUpdate Files="$(BasePath)build\Common.props"
@@ -57,11 +56,6 @@
     <FileUpdate Files="$(BasePath)appveyor.yml"
       WarnOnNoUpdate="true"
       Pattern='((?&lt;=^version:\\s+)(.+?)(?=[.]\\{build\\}))|((?&lt;=BUILD_VERSION[=]\\s*)([^-]+?)(?=[-]\w+))'
-      Replacement='$(AssemblyVersionThreePart)' />
-
-    <FileUpdate Files="$(BasePath)azure-pipelines.yml"
-      WarnOnNoUpdate="true"
-      Pattern='(?&lt;=^\\s*build.version:\\s+)([\\d.]+)(?=[-]\\w+)'
       Replacement='$(AssemblyVersionThreePart)' />
 
     <FileUpdate Files="$(AddinDir)Eto.Addin.MonoDevelop\Properties\AddinInfo.cs"
