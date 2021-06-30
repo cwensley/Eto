@@ -489,5 +489,7 @@ namespace Eto.Mac.Forms.Controls
 		{
 			get { return TextReplacements.Quote | TextReplacements.Text | TextReplacements.Dash | TextReplacements.Spelling; }
 		}
+		
+		public override bool UsesMouseDownEventLoop(MouseEventArgs args) => !args.Handled && args.Buttons == MouseButtons.Primary;
 	}
 }

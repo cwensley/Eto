@@ -371,5 +371,7 @@ namespace Eto.Mac.Forms.Controls
 		}
 
 		public IIndirectBinding<string> ItemKeyBinding { get; set; }
+		
+		public override bool UsesMouseDownEventLoop(MouseEventArgs args) => !args.Handled && args.Buttons == MouseButtons.Primary;
 	}
 }

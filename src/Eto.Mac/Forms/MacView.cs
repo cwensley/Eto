@@ -107,6 +107,7 @@ namespace Eto.Mac.Forms
 		void OnSizeChanged(EventArgs e);
 
 		bool? ShouldHaveFocus { get; set; }
+		bool UsesMouseDownEventLoop(MouseEventArgs e);
 
 		DragEventArgs GetDragEventArgs(NSDraggingInfo info, object customControl);
 
@@ -119,6 +120,7 @@ namespace Eto.Mac.Forms
 		CGPoint GetAlignmentPointForFramePoint(CGPoint point);
 		CGRect GetAlignmentRectForFrame(CGRect frame);
 		bool OnAcceptsFirstMouse(NSEvent theEvent);
+		bool TriggerMouseCallback();
 	}
 
 	static class MacView
@@ -233,7 +235,6 @@ namespace Eto.Mac.Forms
 			}
 		}
 
-
 		internal static MarshalDelegates.Action_IntPtr_IntPtr_IntPtr TriggerMouseDown_Delegate = TriggerMouseDown;
 		static void TriggerMouseDown(IntPtr sender, IntPtr sel, IntPtr e)
 		{
@@ -244,7 +245,7 @@ namespace Eto.Mac.Forms
 				var args = MacConversions.GetMouseEvent(handler, theEvent, false);
 				if (theEvent.ClickCount >= 2)
 					handler.Callback.OnMouseDoubleClick(handler.Widget, args);
-
+				
 				if (!args.Handled)
 				{
 					handler.Callback.OnMouseDown(handler.Widget, args);
@@ -252,6 +253,9 @@ namespace Eto.Mac.Forms
 				if (!args.Handled)
 				{
 					Messaging.void_objc_msgSendSuper_IntPtr(obj.SuperHandle, sel, e);
+					
+					// some controls use event loops until mouse up, so we need to trigger the mouse up here.
+					handler.TriggerMouseCallback();
 				}
 			}
 		}
@@ -565,10 +569,7 @@ namespace Eto.Mac.Forms
 
 		public virtual IEnumerable<Control> VisualControls => Enumerable.Empty<Control>();
 
-		protected virtual Size DefaultMinimumSize
-		{
-			get { return Size.Empty; }
-		}
+		protected virtual Size DefaultMinimumSize => Size.Empty;
 
 		public virtual Size MinimumSize
 		{
@@ -663,6 +664,8 @@ namespace Eto.Mac.Forms
 			get { return Widget.Properties.Get<SizeF?>(MacView.NaturalSizeInfinity_Key); }
 			set { Widget.Properties[MacView.NaturalSizeInfinity_Key] = value; }
 		}
+		
+		public virtual bool UsesMouseDownEventLoop(MouseEventArgs args) => false;
 
 		public virtual void InvalidateMeasure()
 		{
@@ -851,20 +854,32 @@ namespace Eto.Mac.Forms
 		/// Triggers a mouse callback from a different event. 
 		/// e.g. when an NSButton is clicked it is triggered from a mouse up event.
 		/// </summary>
-		protected void TriggerMouseCallback()
+		public bool TriggerMouseCallback()
 		{
 			// trigger mouse up event since it's buried by cocoa
 			var evt = NSApplication.SharedApplication.CurrentEvent;
 			if (evt == null)
-				return;
-			if (evt.Type == NSEventType.LeftMouseUp || evt.Type == NSEventType.RightMouseUp || evt.Type == NSEventType.OtherMouseUp)
+				return false;
+			switch (evt.Type)
 			{
-				Callback.OnMouseUp(Widget, MacConversions.GetMouseEvent(this, evt, false));
+				case NSEventType.LeftMouseUp:
+				case NSEventType.RightMouseUp:
+				case NSEventType.OtherMouseUp:
+				{
+					var args = MacConversions.GetMouseEvent(this, evt, false);
+					Callback.OnMouseUp(Widget, args);
+					return args.Handled;
+				}
+				case NSEventType.LeftMouseDragged:
+				case NSEventType.RightMouseDragged:
+				case NSEventType.OtherMouseDragged:
+				{
+					var args = MacConversions.GetMouseEvent(this, evt, false);
+					Callback.OnMouseMove(Widget, args);
+					return args.Handled;
+				}
 			}
-			if (evt.Type == NSEventType.LeftMouseDragged || evt.Type == NSEventType.RightMouseDragged || evt.Type == NSEventType.OtherMouseDragged)
-			{
-				Callback.OnMouseMove(Widget, MacConversions.GetMouseEvent(this, evt, false));
-			}
+			return false;
 		}
 
 		

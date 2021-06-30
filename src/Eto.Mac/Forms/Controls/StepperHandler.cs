@@ -138,5 +138,7 @@ namespace Eto.Mac.Forms.Controls
 			if (dir != null)
 				h.Callback.OnStep(h.Widget, new StepperEventArgs(dir.Value));
 		}
+
+		public override bool UsesMouseDownEventLoop(MouseEventArgs args) => !args.Handled && args.Buttons == MouseButtons.Primary;
 	}
 }

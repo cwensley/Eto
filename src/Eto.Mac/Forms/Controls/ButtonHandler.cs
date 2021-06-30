@@ -191,8 +191,8 @@ namespace Eto.Mac.Forms.Controls
 
 		protected virtual void OnActivated()
 		{
-			TriggerMouseCallback();
-			Callback.OnClick(Widget, EventArgs.Empty);
+			if (!TriggerMouseCallback())
+				Callback.OnClick(Widget, EventArgs.Empty);
 		}
 
 		public override void AttachEvent(string id)

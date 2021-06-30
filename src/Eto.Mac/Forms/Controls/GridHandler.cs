@@ -743,6 +743,8 @@ namespace Eto.Mac.Forms.Controls
 				}
 			}
 		}
+		
+		public override bool UsesMouseDownEventLoop(MouseEventArgs args) => !args.Handled && args.Buttons == MouseButtons.Primary;
 	}
 }
 

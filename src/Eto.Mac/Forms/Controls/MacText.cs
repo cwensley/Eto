@@ -294,6 +294,8 @@ namespace Eto.Mac.Forms.Controls
 			if (ShouldHaveFocus != true)
 				LastSelection = range;
 		}
+		
+		public override bool UsesMouseDownEventLoop(MouseEventArgs args) => args.Buttons == MouseButtons.Primary;
 	}
 }
 
