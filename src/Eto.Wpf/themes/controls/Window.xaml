@@ -8,7 +8,10 @@
     xmlns:themes="clr-namespace:Xceed.Wpf.Toolkit.Themes;assembly=Xceed.Wpf.Toolkit"
     xmlns:local="clr-namespace:Xceed.Wpf.Toolkit;assembly=Xceed.Wpf.Toolkit">
 
-    <Style TargetType="ef:EtoWindowContent">
+    <Style TargetType="ef:EtoFormWindow">
+        <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+    </Style>
+    <Style TargetType="ef:EtoWindow">
         <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
     </Style>
 

@@ -6,7 +6,7 @@
             "type": "coreclr",
 			"request": "launch",
 			"preLaunchTask": "build-mac64",
-            "program": "${workspaceFolder}/artifacts/test/Eto.Test.Mac64/${config:var.configuration}/net7.0/Eto.Test.Mac64.app/Contents/MacOS/Eto.Test.Mac64",
+            "program": "${workspaceFolder}/artifacts/test/Eto.Test.Mac64/${config:var.configuration}/net8.0/Eto.Test.Mac64.app/Contents/MacOS/Eto.Test.Mac64",
 			// "targetArchitecture": "x86_64", // uncomment to test intel on M1
             "args": [],
             "console": "internalConsole",

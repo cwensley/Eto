@@ -23,7 +23,12 @@ namespace Eto.Test.Sections.Behaviors
 			set { Properties.Set(CancelCloseKey, value, PropertyChanged, false, "CancelClose"); }
 		}
 
+
 		public WindowsSection()
+		{
+
+		}
+		void InitializeControls()
 		{
 			var layout = new DynamicLayout { DefaultSpacing = new Size(5, 5), Padding = new Padding(10) };
 
@@ -31,10 +36,6 @@ namespace Eto.Test.Sections.Behaviors
 
 			layout.AddSeparateRow(null, Resizable(), AutoSize(), Minimizable(), Maximizable(), MovableByWindowBackground(), null);
 			layout.AddSeparateRow(null, ShowInTaskBar(), CloseableCheckBox(), TopMost(), VisibleCheckbox(), CreateShowActivatedCheckbox(), CreateCanFocus(), null);
-			layout.AddSeparateRow(null, "Type", typeControls, null);
-			layout.AddSeparateRow(null, "Window Style", WindowStyle(), null);
-			layout.AddSeparateRow(null, "Window State", WindowState(), null);
-			layout.AddSeparateRow(null, "Dialog Display Mode", DisplayModeDropDown(), null);
 			layout.AddSeparateRow(null, CreateMenuBarControls(), null);
 			layout.AddSeparateRow(null, CreateInitialLocationControls(), null);
 			layout.AddSeparateRow(null, CreateSizeControls(), null);
@@ -44,6 +45,12 @@ namespace Eto.Test.Sections.Behaviors
 			layout.AddSeparateRow(null, CreateChildWindowButton(), null);
 			layout.AddSeparateRow(null, BringToFrontButton(), SetFocusButton(), null);
 			layout.Add(null);
+			layout.AddSeparateRow(null, "Type", typeControls, null);
+			layout.AddSeparateRow(null, "Window Style", WindowStyle(), null);
+			layout.AddSeparateRow(null, "BackgroundColor", CreateBackgroundColorControl(), null);
+			layout.AddSeparateRow(null, "Window State", WindowState(), null);
+			layout.AddSeparateRow(null, "Dialog Display Mode", DisplayModeDropDown(), null);
+			layout.AddCentered("Hello!");
 
 			Content = layout;
 
@@ -74,6 +81,14 @@ namespace Eto.Test.Sections.Behaviors
 			public bool? Topmost { get; set; }
 			public WindowStyle WindowStyle { get; set; }
 			public WindowType WindowType { get; set; }
+			bool setBackgroundColor;
+			public bool SetBackgroundColor
+			{
+				get => setBackgroundColor;
+				set => Set(ref setBackgroundColor, value);
+			}
+			
+			public Color BackgroundColor { get; set; }
 
 			bool windowStyleEnabled;
 			public bool WindowStyleEnabled
@@ -183,6 +198,18 @@ namespace Eto.Test.Sections.Behaviors
 			enableStyle.CheckedBinding.BindDataContext(enabledBindingElseTrue);
 			enableStyle.BindDataContext(c => c.Enabled, enabledBindingCanToggle);
 			return new TableLayout(new TableRow(enableStyle, styleCombo));
+		}
+		
+		Control CreateBackgroundColorControl()
+		{
+			var backgroundColor = new ColorPicker { AllowAlpha = true };
+			backgroundColor.ValueBinding.BindDataContext((SettingsWindow w) => w.BackgroundColor);
+
+			var enabledBinding = Binding.Property<SettingsWindow, bool?>(w => w.SetBackgroundColor);
+			var enableBackgroundColor = new CheckBox { Checked = false };
+			enableBackgroundColor.CheckedBinding.BindDataContext(enabledBinding);
+			backgroundColor.BindDataContext(c => c.Enabled, enabledBinding);
+			return new TableLayout(new TableRow(enableBackgroundColor, backgroundColor));
 		}
 
 		Control DisplayModeDropDown()
@@ -542,6 +569,8 @@ namespace Eto.Test.Sections.Behaviors
 				child.Owner = ParentWindow;
 			if (createMenuBar.Checked ?? false)
 				child.Menu = CreateMenuBar();
+			if (settings.SetBackgroundColor)
+				child.BackgroundColor = settings.BackgroundColor;
 			bringToFrontButton.Enabled = focusButton.Enabled = true;
 			DataContext = child;
 			show();

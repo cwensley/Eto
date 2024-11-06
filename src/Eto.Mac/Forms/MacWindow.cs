@@ -256,10 +256,18 @@ namespace Eto.Mac.Forms
 		public bool MovableByWindowBackground
 		{
 			get => Control.MovableByWindowBackground;
+			
 			set => Control.MovableByWindowBackground = value;
 		}
 
 		protected override Color DefaultBackgroundColor => NSColor.WindowBackground.ToEtoWithAppearance(false);
+
+		protected override void SetBackgroundColor(Color? color)
+		{
+			// base.SetBackgroundColor(color);
+			Control.BackgroundColor = (color ?? DefaultBackgroundColor).ToNSUI();
+			// Control.IgnoresMouseEvents = false;
+		}
 
 		protected override SizeF GetNaturalSize(SizeF availableSize)
 		{

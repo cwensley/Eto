@@ -1,4 +1,5 @@
 using System.Windows.Automation.Peers;
+using System.Windows.Media;
 using Eto.Wpf.Forms.Controls;
 namespace Eto.Wpf.Forms
 {
@@ -35,6 +36,16 @@ namespace Eto.Wpf.Forms
 		protected override AutomationPeer OnCreateAutomationPeer()
 		{
 			return new EtoWindowAutomationPeer(this);
+		}
+
+		protected override HitTestResult HitTestCore(PointHitTestParameters hitTestParameters)
+		{
+			return base.HitTestCore(hitTestParameters);
+		}
+
+		protected override GeometryHitTestResult HitTestCore(GeometryHitTestParameters hitTestParameters)
+		{
+			return base.HitTestCore(hitTestParameters);
 		}
 	}
 

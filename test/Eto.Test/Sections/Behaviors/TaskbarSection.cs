@@ -11,6 +11,7 @@
         {
             var layout = new DynamicLayout();
             layout.DefaultSpacing = new Size(15, 6);
+			
             layout.DefaultPadding = new Padding(10);
             layout.BeginVertical();
 

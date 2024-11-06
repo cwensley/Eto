@@ -1,6 +1,7 @@
 using Eto.Wpf.CustomControls;
 using Eto.Wpf.Forms.Menu;
 using Eto.Wpf.Drawing;
+using System.Windows.Input;
 
 namespace Eto.Wpf.Forms
 {
@@ -82,22 +83,23 @@ namespace Eto.Wpf.Forms
 			{
 				if (Widget.Properties.TrySet(WpfWindow.MovableByWindowBackground_Key, value))
 				{
-					if (value)
-						content.MouseLeftButtonDown += Content_MouseLeftButtonDown;
-					else
-						content.MouseLeftButtonDown -= Content_MouseLeftButtonDown;
+					HandleEvent(Eto.Forms.Control.MouseDownEvent);
 				}
 			}
 		}
 
-		void Content_MouseLeftButtonDown(object sender, swi.MouseButtonEventArgs e)
+		protected override void HandleMouseDown(object sender, MouseButtonEventArgs e)
 		{
-			// mouse could be captured by something else, so we release it here to ensure the DragMove works.
-			// we only get here if no control has handled the mouse down event.
-			swi.Mouse.Captured?.ReleaseMouseCapture();
+			base.HandleMouseDown(sender, e);
+			if (!e.Handled && MovableByWindowBackground)
+			{
+				// mouse could be captured by something else, so we release it here to ensure the DragMove works.
+				// we only get here if no control has handled the mouse down event.
+				swi.Mouse.Captured?.ReleaseMouseCapture();
 
-			Control.DragMove();
-			e.Handled = true;
+				Control.DragMove();
+				e.Handled = true;
+			}
 		}
 
 		protected override void Initialize()
@@ -964,6 +966,7 @@ namespace Eto.Wpf.Forms
 				{
 					Control.WindowStyle = value.ToWpf();
 					SetWindowChrome();
+					SetWindowTransparency();
 				}
 			}
 		}
@@ -1009,7 +1012,8 @@ namespace Eto.Wpf.Forms
 				var windowChrome = new sw.Shell.WindowChrome
 				{
 					CaptionHeight = 0,
-					ResizeBorderThickness = new sw.Thickness(4)
+					ResizeBorderThickness = new sw.Thickness(4),
+				
 				};
 				sw.Shell.WindowChrome.SetWindowChrome(Control, windowChrome);
 			}
@@ -1050,8 +1054,18 @@ namespace Eto.Wpf.Forms
 
 		public override Color BackgroundColor
 		{
-			get { return content.Background.ToEtoColor(); }
-			set { content.Background = value.ToWpfBrush(content.Background); }
+			get => (Control.Background ?? sw.SystemColors.ControlBrush).ToEtoColor();
+			set
+			{
+				Control.Background = value.ToWpfBrush();
+				SetWindowTransparency();
+			}
+		}
+		
+		void SetWindowTransparency()
+		{
+			var isTransparent = Control.Background is swm.SolidColorBrush scb && scb.Color.A < 255;
+			//Control.AllowsTransparency = isTransparent && WindowStyle == WindowStyle.None;
 		}
 
 		public Screen Screen

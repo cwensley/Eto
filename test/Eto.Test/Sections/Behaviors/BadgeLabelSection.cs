@@ -4,11 +4,12 @@ namespace Eto.Test.Sections.Behaviors
 	public class BadgeLabelSection : Scrollable
 	{
 		public BadgeLabelSection()
-		{
+		{			
 			var layout = new DynamicLayout { Spacing = new Size(5, 5), Padding = new Padding(10) };
 
 			layout.AddRow(null, SetBadgeLabel(), null);
 			layout.Add(null);
+
 
 			Content = layout;
 		}

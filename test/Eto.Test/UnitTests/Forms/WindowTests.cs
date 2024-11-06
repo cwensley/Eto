@@ -394,4 +394,54 @@ public abstract class WindowTests<T> : TestBase
 		Assert.That(loadComplete, Is.True, "#1.1 - Window should be visible during LoadComplete");
 		Assert.That(shown, Is.True, "#1.2 - Window should be visible during Shown");
 	});
+
+	[ManualTest]
+	[Test]
+	public void TransparentWindowShouldBeClickable() => Async(async () =>
+	{
+		bool mouseWasDown = false;
+		var closeButton = new Button { Text = "Close" };
+		var window = new T
+		{
+			Owner = Application.Instance.MainForm,
+			WindowStyle = WindowStyle.None,
+			BackgroundColor = Colors.Transparent,
+			MovableByWindowBackground = true,
+			Size = new Size(200, 200),
+			Topmost = true,
+			Content = new TableLayout
+			{
+				Rows = {
+					new Label {
+						BackgroundColor = Colors.Blue,
+						Text = "Click Between Blue Bars.\nWindow should close.",
+						VerticalAlignment = VerticalAlignment.Center,
+						TextAlignment = TextAlignment.Center,
+					 	TextColor = Colors.White,
+						Height = 40 
+						},
+					null,
+					new Panel { 
+						BackgroundColor = Colors.Blue, 
+						Height = 40,
+						Content = TableLayout.AutoSized(closeButton, centered: true)
+						}
+				}
+			}
+		};
+		closeButton.Click += (sender, e) => window.Close();
+		window.MouseDown += (sender, e) =>
+		{
+			mouseWasDown = true;
+		};
+		window.MouseUp += (sender, e) =>
+		{
+			// if (mouseWasDown)
+			// 	window.Close();
+		};
+
+		await ShowAsync(window);
+
+		Assert.IsTrue(mouseWasDown, "Mouse was not down to close the window");
+	});
 }

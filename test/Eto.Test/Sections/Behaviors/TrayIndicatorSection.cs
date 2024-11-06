@@ -9,7 +9,7 @@ namespace Eto.Test.Sections.Behaviors
         {
 			tray = new TrayIndicator();
 			tray.Image = TestIcons.TestIcon;
-			tray.Title = "Eto Test App";
+			tray.Title = "Eto Test App!";
 
 			var menu = new ContextMenu();
 			menu.Items.Add(new Commands.About());
