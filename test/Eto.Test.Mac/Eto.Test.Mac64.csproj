@@ -5,10 +5,11 @@
   <Import Project="..\..\src\Eto.Mac\build\Mac.props" Condition="'$(ExcludeRestorePackageImports)' != 'true'" />
   
   <PropertyGroup>
-    <TargetFrameworks>net7.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>WinExe</OutputType>
     
-    <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers>
+    <!-- <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers> -->
+    <RuntimeIdentifiers>osx-arm64</RuntimeIdentifiers>
     <DefineConstants>MONOMAC</DefineConstants>
     <LangVersion>10.0</LangVersion>
     <DebugType>embedded</DebugType>

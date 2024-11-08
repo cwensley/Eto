@@ -17,6 +17,7 @@ public static class HotReloadService
 	{
 		if (!Debugger.IsAttached)
 			return;
+			
 
 		Eto.Style.Add<Container>(null, container =>
 		{
