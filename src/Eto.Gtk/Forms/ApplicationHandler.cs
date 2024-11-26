@@ -320,6 +320,12 @@ namespace Eto.GtkSharp.Forms
 					break;
 				case Eto.Forms.Application.IsActiveChangedEvent:
 					break;
+				case Eto.Forms.Application.CurrentThemeChangedEvent:
+					// Listen for OS/system theme changes via GtkSettings property notifications
+					var settings = Gtk.Settings.Default;
+					settings.AddNotification("gtk-theme-name", OnSettingsThemeChanged);
+					settings.AddNotification("gtk-application-prefer-dark-theme", OnSettingsThemeChanged);
+					break;
 				default:
 					base.AttachEvent(id);
 					break;
@@ -361,6 +367,40 @@ namespace Eto.GtkSharp.Forms
 		public Keys CommonModifier { get { return Keys.Control; } }
 
 		public Keys AlternateModifier { get { return Keys.Alt; } }
+
+		Theme _currentTheme;
+		bool _settingTheme;
+
+		void OnSettingsThemeChanged(object o, GLib.NotifyArgs args)
+		{
+			if (_settingTheme)
+				return;
+			// OS theme changed externally, reset cached theme so it's re-read
+			_currentTheme = null;
+			Callback.OnCurrentThemeChanged(Widget, EventArgs.Empty);
+		}
+
+		public Theme CurrentTheme
+		{
+			get => _currentTheme ??= (Platform.Instance.CreateShared<Themes.IHandler>() as ThemesHandler)?.System;
+			set
+			{
+				_currentTheme = value;
+				if (value?.Handler is ThemeHandler handler)
+				{
+					_settingTheme = true;
+					try
+					{
+						handler.SetTheme();
+					}
+					finally
+					{
+						_settingTheme = false;
+					}
+				}
+				Callback.OnCurrentThemeChanged(Widget, EventArgs.Empty);
+			}
+		}
 
 		private void RestartInternal()
 		{

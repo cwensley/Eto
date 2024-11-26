@@ -32,6 +32,16 @@ namespace Eto.Test
 			{
 				NotificationActivated += (sender, e) => Log.Write(this, $"Notification: {e.ID}, userData: {e.UserData}");
 			}
+
+			if (platform.Supports<Themes.IHandler>() && !string.IsNullOrEmpty(Settings.LastTheme))
+				CurrentTheme = Themes.AllThemes.FirstOrDefault(t => t.Name == Settings.LastTheme) ?? Themes.System;
+
+		}
+
+		protected override void OnCurrentThemeChanged(EventArgs e)
+		{
+			base.OnCurrentThemeChanged(e);
+			Settings.LastTheme = CurrentTheme.Name;
 		}
 
 		protected override void OnIsActiveChanged(EventArgs e)

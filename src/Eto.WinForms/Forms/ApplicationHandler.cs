@@ -299,5 +299,26 @@ namespace Eto.WinForms.Forms
 				return Keys.Alt;
 			}
 		}
+
+#if NET9_0_OR_GREATER
+		Theme _theme;
+		public Theme CurrentTheme
+		{
+			get => _theme ??= new Theme(new ThemeHandler(swf.Application.ColorMode));
+			set
+			{
+				if (value != null)
+				{
+					var handler = value.Handler as ThemeHandler;
+					if (handler != null)
+						handler.SetTheme();
+				}
+				_theme = value;
+			}
+		}
+#else
+		public Theme CurrentTheme { get; set; }
+#endif
+
 	}
 }
