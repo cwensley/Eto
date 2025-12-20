@@ -3,7 +3,7 @@ namespace Eto.WinUI.Forms.Controls;
 public class ButtonHandler : WinUIControl<muc.Button, Button, Button.ICallback>, Button.IHandler
 {
 	muc.TextBlock _textBlock;
-	public Image Image { get; set; }
+	public Image? Image { get; set; }
 	public ButtonImagePosition ImagePosition { get; set; }
 	public Size MinimumSize { get; set; }
 

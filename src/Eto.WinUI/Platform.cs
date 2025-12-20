@@ -4,6 +4,7 @@ using Eto.IO;
 using Eto.Forms.ThemedControls;
 using Eto.WinUI.Forms;
 using Eto.WinUI.Forms.Controls;
+using Eto.WinUI.Drawing;
 
 namespace Eto.WinUI
 {
@@ -34,23 +35,23 @@ namespace Eto.WinUI
 		public static void AddTo(Eto.Platform p)
 		{
 			// Drawing
-			//p.Add<Bitmap.IHandler>(() => new BitmapHandler());
+			p.Add<Bitmap.IHandler>(() => new BitmapHandler());
 			//p.Add<FontFamily.IHandler>(() => new FontFamilyHandler());
 			//p.Add<FontTypeface.IHandler>(() => new FontTypefaceHandler());
 			//p.Add<Font.IHandler>(() => new FontHandler());
 			//p.Add<Fonts.IHandler>(() => new FontsHandler());
 			//p.Add<Graphics.IHandler>(() => new GraphicsHandler());
 			//p.Add<GraphicsPath.IHandler>(() => new GraphicsPathHandler());
-			//p.Add<Icon.IHandler>(() => new IconHandler());
+			p.Add<Icon.IHandler>(() => new IconHandler());
 			//p.Add<IconFrame.IHandler>(() => new IconFrameHandler());
 			//p.Add<IndexedBitmap.IHandler>(() => new IndexedBitmapHandler());
-			//p.Add<Matrix.IHandler>(() => new MatrixHandler());
+			p.Add<Matrix.IHandler>(() => new MatrixHandler());
 			//p.Add<Pen.IHandler>(() => new PenHandler());
-			//p.Add<SolidBrush.IHandler>(() => new SolidBrushHandler());
+			p.Add<SolidBrush.IHandler>(() => new SolidBrushHandler());
 			//p.Add<TextureBrush.IHandler>(() => new TextureBrushHandler());
 			//p.Add<LinearGradientBrush.IHandler>(() => new LinearGradientBrushHandler());
 			//p.Add<RadialGradientBrush.IHandler>(() => new RadialGradientBrushHandler());
-			//p.Add<SystemColors.IHandler>(() => new SystemColorsHandler());
+			p.Add<SystemColors.IHandler>(() => new SystemColorsHandler());
 			//p.Add<FormattedText.IHandler>(() => new FormattedTextHandler());
 
 			// Forms.Cells
@@ -71,7 +72,7 @@ namespace Eto.WinUI
 			//p.Add<ComboBox.IHandler>(() => new ComboBoxHandler());
 			//p.Add<ColorPicker.IHandler>(() => new ColorPickerHandler());
 			//p.Add<DateTimePicker.IHandler>(() => new DateTimePickerHandler());
-			//p.Add<Drawable.IHandler>(() => new DrawableHandler());
+			p.Add<Drawable.IHandler>(() => new DrawableHandler());
 			//p.Add<Expander.IHandler>(() => new ExpanderHandler());
 			p.Add<FontPicker.IHandler>(() => new ThemedFontPickerHandler());
 			//p.Add<GridColumn.IHandler>(() => new GridColumnHandler());

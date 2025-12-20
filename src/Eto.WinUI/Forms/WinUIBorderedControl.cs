@@ -2,19 +2,20 @@ using Eto.WinUI.Forms.Controls;
 
 namespace Eto.WinUI.Forms;
 
-public class WinUIBorderedControl<TControl, TWidget, TCallback> : WinUIFrameworkElement<TControl, TWidget, TCallback>
-	where TControl : mux.FrameworkElement
+public abstract class WinUIBorderedControl<TControl, TWidget, TCallback> : WinUIFrameworkElement<TControl, TWidget, TCallback>
+	where TControl : mux.UIElement
 	where TWidget : Control
 	where TCallback : Control.ICallback
 {
-	readonly EtoDockPanel _border = new();
+	readonly EtoContentControl _border = new();
 
-	public Padding Padding
+	public virtual Padding Padding
 	{
 		get => _border.Padding.ToEto();
 		set => _border.Padding = value.ToWinUI();
 	}
-	public Size MinimumSize
+
+	public virtual Size MinimumSize
 	{
 		get => _border.GetMinSize().ToEtoSize();
 		set => _border.SetMinSize(value);
@@ -32,7 +33,7 @@ public class WinUIBorderedControl<TControl, TWidget, TCallback> : WinUIFramework
 	{
 		base.Initialize();
 		_border.Handler = this;
-		_border.Children.Add(Control);
+		_border.Content = Control;
 	}
 
 }

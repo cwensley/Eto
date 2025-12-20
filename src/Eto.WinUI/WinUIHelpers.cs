@@ -20,7 +20,7 @@ namespace Eto.Forms
 		/// <returns>The native control that can be used to add this control to an existing application.</returns>
 		/// <param name="control">Control to get the native control for.</param>
 		/// <param name="attach">If set to <c>true</c> the control is to be attached to an existing application, or <c>false</c> to get the native control directly.</param>
-		public static mux.FrameworkElement? ToNative(this Control control, bool attach = false)
+		public static mux.FrameworkElement? ToNative(this Control? control, bool attach = false)
 		{
 			if (control?.Handler is not IWinUIFrameworkElement handler)
 				return null;

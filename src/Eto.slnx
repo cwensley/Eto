@@ -4,6 +4,7 @@
     <Platform Name="Linux" />
     <Platform Name="Mac" />
     <Platform Name="Windows" />
+    <Platform Name="Windows-arm64" />
     <Platform Name="Windows-x64" />
   </Configurations>
   <Folder Name="/build/">
@@ -28,6 +29,7 @@
     <Project Path="../test/Eto.Test.Mac/Eto.Test.macOS.csproj">
       <Build Solution="*|Linux" Project="false" />
       <Build Solution="*|Windows" Project="false" />
+      <Build Solution="*|Windows-arm64" Project="false" />
       <Build Solution="*|Windows-x64" Project="false" />
     </Project>
     <Project Path="../test/Eto.Test.WinForms/Eto.Test.WinForms.csproj">
@@ -36,6 +38,8 @@
     </Project>
     <Project Path="../test/Eto.Test.WinUI/Eto.Test.WinUI.csproj">
       <Platform Solution="*|Windows-x64" Project="x64" />
+      <Platform Solution="Debug|Windows" Project="x64" />
+      <Platform Solution="Debug|Windows-arm64" Project="arm64" />
       <Build Solution="*|Linux" Project="false" />
       <Build Solution="*|Mac" Project="false" />
       <Deploy Solution="Debug|Any CPU" />
@@ -52,6 +56,7 @@
   <Project Path="Eto.Mac/Eto.macOS.csproj">
     <Build Solution="*|Linux" Project="false" />
     <Build Solution="*|Windows" Project="false" />
+    <Build Solution="*|Windows-arm64" Project="false" />
     <Build Solution="*|Windows-x64" Project="false" />
   </Project>
   <Project Path="Eto.Serialization.Json/Eto.Serialization.Json.csproj" />

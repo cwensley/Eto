@@ -24,7 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.3916" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
+    <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.3.2" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
@@ -49,4 +50,17 @@
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
+
+  <!--
+    Win2D uses WinRT/COM activation to load Microsoft.Graphics.Canvas.dll, which only
+    searches the app directory. NuGet places the native DLL under runtimes\win-{arch}\native\
+    but that subdirectory isn't searched by WinRT activation. This target copies it to the
+    output root so CanvasControl can find it at runtime (required for unpackaged apps).
+  -->
+  <Target Name="CopyWin2DNativeDll" AfterTargets="Build" Condition="'$(win2d-Platform)' != ''">
+    <Copy
+      SourceFiles="$(OutputPath)runtimes\win-$(win2d-Platform)\native\Microsoft.Graphics.Canvas.dll"
+      DestinationFolder="$(OutputPath)"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>

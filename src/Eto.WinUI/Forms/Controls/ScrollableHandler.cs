@@ -7,17 +7,17 @@ namespace Eto.WinUI.Forms.Controls;
 
 public class ScrollableHandler : WinUIPanel<muc.ScrollView, Scrollable, Scrollable.ICallback>, Scrollable.IHandler
 {
-	EtoDockPanel _container;
+	EtoContentControl _container;
 
 	public ScrollableHandler()
 	{
-		_container = new EtoDockPanel { Handler = this };
+		_container = new EtoContentControl { Handler = this };
 	}
 
 	protected override void Initialize()
 	{
 		base.Initialize();
-		_container.Child = Control;
+		_container.Content = Control;
 	}
 
 	protected override muc.ScrollView CreateControl() => new();

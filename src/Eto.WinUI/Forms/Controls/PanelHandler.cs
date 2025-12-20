@@ -4,32 +4,28 @@ using Windows.Security.Authentication.OnlineId;
 
 namespace Eto.WinUI.Forms.Controls;
 
-public class EtoDockPanel : CommunityToolkit.WinUI.Controls.DockPanel
+public class EtoContentControl : muc.ContentControl
 {
-	public IWinUIFrameworkElement Handler { get; set; }
+	public IWinUIFrameworkElement? Handler { get; set; }
+
+	public EtoContentControl()
+	{
+		DefaultStyleKey = typeof(EtoContentControl);
+		HorizontalContentAlignment = mux.HorizontalAlignment.Stretch;
+		VerticalContentAlignment = mux.VerticalAlignment.Stretch;
+	}
+
 	protected override wf.Size MeasureOverride(wf.Size availableSize)
 	{
 		return Handler?.MeasureOverride(availableSize, base.MeasureOverride) ?? base.MeasureOverride(availableSize);
 	}
-
-	public mux.UIElement Child
-	{
-		get => Children.Count > 0 ? Children[0] : null;
-		set
-		{
-			if (Children.Count > 0)
-				Children.RemoveAt(0);
-			if (value != null)
-				Children.Insert(0, value);
-		}
-	}
 }
 
-public class PanelHandler : WinUIContainer<EtoDockPanel, Panel, Panel.ICallback>, Panel.IHandler
+public class PanelHandler : WinUIContainer<EtoContentControl, Panel, Panel.ICallback>, Panel.IHandler
 {
 
-	Control _content;
-	public Control Content
+	Control? _content;
+	public Control? Content
 	{
 		get => _content;
 		set
@@ -37,7 +33,7 @@ public class PanelHandler : WinUIContainer<EtoDockPanel, Panel, Panel.ICallback>
 			if (_content != value)
 			{
 				_content = value;
-				Control.Child = value.ToNative();
+				Control.Content = value.ToNative();
 			}
 		}
 	}
@@ -60,5 +56,5 @@ public class PanelHandler : WinUIContainer<EtoDockPanel, Panel, Panel.ICallback>
 		set => Control.Background = value.ToWinUIBrush();
 	}
 
-	protected override EtoDockPanel CreateControl() => new EtoDockPanel();
+	protected override EtoContentControl CreateControl() => new EtoContentControl();
 }

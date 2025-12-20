@@ -93,6 +93,18 @@
 			"justMyCode": false
         },
         {
+            "name": "Eto.Test.WinUI",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build-winui",
+            "program": "${workspaceFolder}/artifacts/test/Eto.Test.WinUI/${config:var.configuration}/net10.0-windows10.0.22621/Eto.Test.WinUI.exe",
+			// "targetArchitecture": "x86_64",
+            "args": [],
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart",
+			"justMyCode": false
+        },
+        {
             "name": "Eto.Test.WinForms",
 			"type": "coreclr",
 			"request": "launch",

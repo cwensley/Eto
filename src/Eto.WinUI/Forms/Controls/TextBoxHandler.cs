@@ -1,7 +1,11 @@
+
 namespace Eto.WinUI.Forms.Controls;
+
 
 public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallback>, TextBox.IHandler, SearchBox.IHandler
 {
+	protected override bool PreventUserResize => true;
+
 	public bool ReadOnly
 	{
 		get => Control.IsReadOnly;
@@ -58,6 +62,8 @@ public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallba
 	}
 
 	public void SelectAll() => Control.SelectAll();
+
+	protected override wf.Size DefaultSize => new wf.Size(100, Control.MinHeight);
 
 	protected override muc.TextBox CreateControl() => new EtoTextBox { Handler = this };
 
