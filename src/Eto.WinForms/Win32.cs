@@ -1023,6 +1023,10 @@ namespace Eto
 				return SHIL_LARGE;    // 32x32
 			return SHIL_SMALL;       // 16x16
 		}
-		
+
+		public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+		[DllImport("dwmapi.dll")]
+		public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 	}
 }

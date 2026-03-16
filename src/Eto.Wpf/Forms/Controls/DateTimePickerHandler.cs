@@ -111,7 +111,7 @@ namespace Eto.Wpf.Forms.Controls
 				return;
 			}
 
-			_calendar = new swc.Calendar { SelectionMode = swc.CalendarSelectionMode.SingleDate };
+			_calendar = new EtoCalendar { SelectionMode = swc.CalendarSelectionMode.SingleDate };
 			_calendar.SelectedDatesChanged += Calendar_SelectedDatesChanged;
 
 			// the combo box visuals (background, border, chevron) come from the theme style in

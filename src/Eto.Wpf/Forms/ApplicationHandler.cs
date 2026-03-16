@@ -304,15 +304,19 @@ public class ApplicationHandler : WidgetHandler<sw.Application, Application, App
 		}
 		set
 		{
+			var previousTheme = _currentTheme;
 			_currentTheme = value;
-			ApplyTheme(value);
+			ApplyTheme(value, previousTheme);
 
 			Callback.OnThemeChanged(Widget, EventArgs.Empty);
 		}
 	}
 
-	private void ApplyTheme(Theme value)
+	private void ApplyTheme(Theme value, Theme previousTheme = null)
 	{
+		if (!ReferenceEquals(previousTheme, value) && previousTheme?.Handler is IThemeHandler previousHandler)
+			previousHandler.UnsetTheme();
+
 		var mergedDicts = Control.Resources.MergedDictionaries;
 		if (_themeResources != null)
 		{
@@ -335,6 +339,9 @@ public class ApplicationHandler : WidgetHandler<sw.Application, Application, App
 				mergedDicts.Add(_themeResources);
 			}
 
+			// Now that the theme's dictionaries (including the palette) are merged, let the
+			// handler apply any overrides that depend on the merged values.
+			handler.ThemeResourcesMerged();
 		}
 
 	}
