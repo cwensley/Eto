@@ -5,6 +5,8 @@ using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Brushes;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Storage.Streams;
 
 namespace Eto.WinUI.Drawing;
 
@@ -13,21 +15,26 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	static readonly RectangleF DefaultClipBounds = new(-1000000f, -1000000f, 2000000f, 2000000f);
 
 	readonly Stack<Matrix3x2> _savedTransforms = new();
+	Bitmap? _image;
+	CanvasRenderTarget? _renderTarget;
 	IDisposable? _clipLayer;
 	IDisposable? _clipResource;
 	RectangleF _clipBounds = DefaultClipBounds;
+	RectangleF _initialClipBounds = DefaultClipBounds;
 	ImageInterpolation _imageInterpolation = ImageInterpolation.Medium;
 	PixelOffsetMode _pixelOffsetMode = PixelOffsetMode.Half;
+	bool _disposeControl;
+	
+	public GraphicsHandler()
+	{
+	}
 
 	public GraphicsHandler(CanvasDrawingSession drawingSession)
 	{
-		Control = drawingSession;
-		Control.Units = CanvasUnits.Dips;
-		Control.Antialiasing = CanvasAntialiasing.Antialiased;
-		Control.TextAntialiasing = CanvasTextAntialiasing.Auto;
+		InitializeDrawingSession(drawingSession);
 	}
 
-	protected override bool DisposeControl => false;
+	protected override bool DisposeControl => _disposeControl;
 
 	public float PointsPerPixel => 72f / 96f;
 
@@ -53,7 +60,7 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		set => _imageInterpolation = value;
 	}
 
-	public bool IsRetained => false;
+	public bool IsRetained => _image != null;
 
 	public IMatrix CurrentTransform => new MatrixHandler(Control.Transform);
 
@@ -67,7 +74,18 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	public void CreateFromImage(Bitmap image)
 	{
-		throw new NotSupportedException("Drawing to a WinUI bitmap is not implemented yet.");
+		_image = image;
+		_initialClipBounds = new RectangleF(0, 0, image.Width, image.Height);
+		_clipBounds = _initialClipBounds;
+		_renderTarget = new CanvasRenderTarget(CanvasDevice.GetSharedDevice(), Math.Max(image.Width, 1), Math.Max(image.Height, 1), 96f);
+		CopySourceImage(_renderTarget, image);
+		_initializeControlFromImage();
+	}
+
+	void _initializeControlFromImage()
+	{
+		_disposeControl = true;
+		InitializeDrawingSession(_renderTarget!.CreateDrawingSession());
 	}
 
 	public void DrawArc(Pen pen, float x, float y, float width, float height, float startAngle, float sweepAngle)
@@ -215,6 +233,7 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	public void Flush()
 	{
+		CommitRenderTarget();
 	}
 
 	public SizeF MeasureString(Font font, string text)
@@ -241,7 +260,7 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		_clipLayer = null;
 		_clipResource?.Dispose();
 		_clipResource = null;
-		_clipBounds = DefaultClipBounds;
+		_clipBounds = _initialClipBounds;
 	}
 
 	public void RestoreTransform()
@@ -296,6 +315,43 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		_clipBounds = clipBounds;
 	}
 
+	void CommitRenderTarget()
+	{
+		if (_image?.Handler is not BitmapHandler bitmapHandler || _renderTarget == null || Control == null)
+			return;
+
+		var transform = Control.Transform;
+		var clipGeometry = _clipResource as CanvasGeometry;
+		var clipBounds = _clipBounds;
+		_clipLayer?.Dispose();
+		_clipLayer = null;
+		Control.Dispose();
+
+		using var stream = new InMemoryRandomAccessStream();
+		_renderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png).AsTask().GetAwaiter().GetResult();
+		stream.Seek(0);
+		var bitmapImage = new BitmapImage();
+		bitmapImage.SetSource(stream);
+		bitmapHandler.SetBitmap(bitmapImage);
+
+		InitializeDrawingSession(_renderTarget.CreateDrawingSession());
+		Control.Transform = transform;
+		_clipBounds = clipBounds;
+		if (clipGeometry != null)
+		{
+			_clipResource = clipGeometry;
+			_clipLayer = Control.CreateLayer(1f, clipGeometry);
+		}
+	}
+
+	void InitializeDrawingSession(CanvasDrawingSession drawingSession)
+	{
+		Control = drawingSession;
+		Control.Units = CanvasUnits.Dips;
+		Control.Antialiasing = CanvasAntialiasing.Antialiased;
+		Control.TextAntialiasing = CanvasTextAntialiasing.Auto;
+	}
+
 	BrushReference CreateBrushReference(Brush brush)
 	{
 		if (brush.ControlObject is ICanvasBrush canvasBrush)
@@ -334,6 +390,20 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		}
 
 		return strokeStyle;
+	}
+
+	static void CopySourceImage(CanvasRenderTarget renderTarget, Bitmap image)
+	{
+		if (image.Handler is not IWinUIImage winUIImage)
+			return;
+
+		var source = winUIImage.GetImageClosestToSize(1f, image.Size);
+		if (source is not BitmapImage bitmapImage || bitmapImage.UriSource == null || !bitmapImage.UriSource.IsFile)
+			return;
+
+		using var canvasBitmap = CanvasBitmap.LoadAsync(renderTarget, bitmapImage.UriSource.LocalPath).AsTask().GetAwaiter().GetResult();
+		using var drawingSession = renderTarget.CreateDrawingSession();
+		drawingSession.DrawImage(canvasBitmap, 0, 0);
 	}
 
 	static CanvasTextFormat CreateTextFormat(Font font)
@@ -389,11 +459,23 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		rectangle.BottomLeft
 	];
 
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			CommitRenderTarget();
+			ResetClip();
+			_renderTarget?.Dispose();
+			_renderTarget = null;
+		}
+
+		base.Dispose(disposing);
+	}
+
 	readonly record struct BrushReference(ICanvasBrush Brush, IDisposable? Disposable) : IDisposable
 	{
 		public void Dispose() => Disposable?.Dispose();
 	}
-
 }
 
 static class WinUIGraphicsExtensions
@@ -413,5 +495,3 @@ static class WinUIGraphicsExtensions
 		_ => CanvasLineJoin.Miter
 	};
 }
-
-

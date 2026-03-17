@@ -40,10 +40,10 @@ namespace Eto.WinUI
 			//p.Add<FontTypeface.IHandler>(() => new FontTypefaceHandler());
 			//p.Add<Font.IHandler>(() => new FontHandler());
 			//p.Add<Fonts.IHandler>(() => new FontsHandler());
-			//p.Add<Graphics.IHandler>(() => new GraphicsHandler());
+			p.Add<Graphics.IHandler>(() => new GraphicsHandler());
 			//p.Add<GraphicsPath.IHandler>(() => new GraphicsPathHandler());
 			p.Add<Icon.IHandler>(() => new IconHandler());
-			//p.Add<IconFrame.IHandler>(() => new IconFrameHandler());
+			p.Add<IconFrame.IHandler>(() => new IconFrameHandler());
 			//p.Add<IndexedBitmap.IHandler>(() => new IndexedBitmapHandler());
 			p.Add<Matrix.IHandler>(() => new MatrixHandler());
 			//p.Add<Pen.IHandler>(() => new PenHandler());

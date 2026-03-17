@@ -4,21 +4,30 @@ using System.Threading.Tasks;
 
 namespace Eto.WinUI.Drawing;
 
-public class BitmapHandler : WidgetHandler<BitmapImage, Bitmap>, Bitmap.IHandler
+internal interface IWinUIImage
 {
+	BitmapSource? GetImageClosestToSize(float scale, Size? fittingSize);
+}
+
+public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandler, IWinUIImage
+{
+	BitmapSource? _source;
+
 	public BitmapHandler()
 	{
 	}
 
-	public BitmapHandler(BitmapImage image)
+	public BitmapHandler(BitmapSource image)
 	{
 		Control = image;
+		_source = image;
 	}
 
 	public void Create(string fileName)
 	{
 		var uri = new System.Uri("file:///" + fileName.Replace("\\", "/"));
 		Control = new BitmapImage(uri);
+		_source = Control;
 	}
 
 	public void Create(Stream stream)
@@ -29,35 +38,47 @@ public class BitmapHandler : WidgetHandler<BitmapImage, Bitmap>, Bitmap.IHandler
 		ms.Position = 0;
 		bitmap.SetSource(ms.AsRandomAccessStream());
 		Control = bitmap;
+		_source = bitmap;
 	}
 
 	public void Create(int width, int height, PixelFormat pixelFormat)
 	{
-		// WinUI BitmapImage does not support direct pixel creation.
-		// For advanced scenarios, use WriteableBitmap.
-		Control = new BitmapImage();
+		Control = new WriteableBitmap(width, height);
+		_source = Control;
 	}
 
 	public void Create(int width, int height, Graphics graphics)
 	{
-		Control = new BitmapImage();
+		Control = new WriteableBitmap(width, height);
+		_source = Control;
 	}
 
 	public void Create(Image image, int width, int height, ImageInterpolation interpolation)
 	{
 		// Not implemented: requires image resizing logic.
 		Control = new BitmapImage();
+		_source = new WriteableBitmap(width, height);
 	}
 
 	public Size Size
 	{
 		get
 		{
-			if (Control == null)
+			var source = _source ?? Control;
+			if (source == null)
 				return Size.Empty;
-			return new Size((int)Control.PixelWidth, (int)Control.PixelHeight);
+			return new Size(source.PixelWidth, source.PixelHeight);
 		}
 	}
+
+	internal void SetBitmap(BitmapSource source)
+	{
+		_source = source;
+		if (source is BitmapImage bitmapImage)
+			Control = bitmapImage;
+	}
+
+	public BitmapSource? GetImageClosestToSize(float scale, Size? fittingSize) => _source ?? Control;
 
 	public BitmapData Lock()
 	{

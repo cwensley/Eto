@@ -39,19 +39,16 @@ public class IconHandler : WidgetHandler<BitmapImage, Icon>, Icon.IHandler
 			return new Size((int)Control.PixelWidth, (int)Control.PixelHeight);
 		}
 	}
+	
+	List<IconFrame>? frames;
 
 	public void Create(IEnumerable<IconFrame> frames)
 	{
-		// Not implemented: WinUI does not support multi-frame icons.
-		throw new NotSupportedException();
+		this.frames = frames.ToList();
+		if (this.frames.Count > 0)
+			Control = Widget.GetFrame(1).Bitmap.ToBitmapImage();
+		
 	}
 
-	public IEnumerable<IconFrame> Frames
-	{
-		get
-		{
-			// Not implemented: WinUI does not support multi-frame icons.
-			yield break;
-		}
-	}
+	public IEnumerable<IconFrame> Frames => frames ?? Enumerable.Empty<IconFrame>();
 }
