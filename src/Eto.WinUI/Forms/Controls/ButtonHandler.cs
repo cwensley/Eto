@@ -201,8 +201,8 @@ public class ButtonHandler : WinUIControl<muc.Button, Button, Button.ICallback>,
 
 	static muxm.ImageSource ToImageSource(Image image) => image switch
 	{
-		Bitmap bitmap => bitmap.ToBitmapImage(),
-		Icon icon => icon.GetFrame(1).Bitmap.ToBitmapImage(),
+		Bitmap bitmap => bitmap.ToBitmapSource(),
+		Icon icon => icon.GetFrame(1).Bitmap.ToBitmapSource(),
 		_ => throw new NotSupportedException($"Image type '{image.GetType().FullName}' is not supported by Eto.WinUI buttons.")
 	};
 

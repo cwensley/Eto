@@ -46,7 +46,7 @@ namespace Eto.WinUI
 			p.Add<IconFrame.IHandler>(() => new IconFrameHandler());
 			//p.Add<IndexedBitmap.IHandler>(() => new IndexedBitmapHandler());
 			p.Add<Matrix.IHandler>(() => new MatrixHandler());
-			//p.Add<Pen.IHandler>(() => new PenHandler());
+			p.Add<Pen.IHandler>(() => new PenHandler());
 			p.Add<SolidBrush.IHandler>(() => new SolidBrushHandler());
 			//p.Add<TextureBrush.IHandler>(() => new TextureBrushHandler());
 			//p.Add<LinearGradientBrush.IHandler>(() => new LinearGradientBrushHandler());
@@ -70,7 +70,7 @@ namespace Eto.WinUI
 			p.Add<CheckBox.IHandler>(() => new CheckBoxHandler());
 			p.Add<DropDown.IHandler>(() => new DropDownHandler());
 			//p.Add<ComboBox.IHandler>(() => new ComboBoxHandler());
-			//p.Add<ColorPicker.IHandler>(() => new ColorPickerHandler());
+			p.Add<ColorPicker.IHandler>(() => new ThemedColorPickerHandler());
 			//p.Add<DateTimePicker.IHandler>(() => new DateTimePickerHandler());
 			p.Add<Drawable.IHandler>(() => new DrawableHandler());
 			//p.Add<Expander.IHandler>(() => new ExpanderHandler());
@@ -86,10 +86,10 @@ namespace Eto.WinUI
 			p.Add<Panel.IHandler>(() => new PanelHandler());
 			//p.Add<PasswordBox.IHandler>(() => new PasswordBoxHandler());
 			//p.Add<ProgressBar.IHandler>(() => new ProgressBarHandler());
-			//p.Add<RadioButton.IHandler>(() => new RadioButtonHandler());
+			p.Add<RadioButton.IHandler>(() => new RadioButtonHandler());
 			p.Add<SearchBox.IHandler>(() => new TextBoxHandler());
 			p.Add<Scrollable.IHandler>(() => new ScrollableHandler());
-			//p.Add<Slider.IHandler>(() => new SliderHandler());
+			p.Add<Slider.IHandler>(() => new SliderHandler());
 			p.Add<Spinner.IHandler>(() => new ThemedSpinnerHandler());
 			p.Add<Splitter.IHandler>(() => new SplitterHandler());
 			//p.Add<TabControl.IHandler>(() => new TabControlHandler());
@@ -141,9 +141,9 @@ namespace Eto.WinUI
 			p.Add<AboutDialog.IHandler>(() => new ThemedAboutDialogHandler());
 			p.Add<Application.IHandler>(() => new ApplicationHandler());
 			//p.Add<Clipboard.IHandler>(() => new ClipboardHandler());
-			//p.Add<ColorDialog.IHandler>(() => new ColorDialogHandler());
+			p.Add<ColorDialog.IHandler>(() => new ThemedColorDialogHandler());
 			//p.Add<Cursor.IHandler>(() => new CursorHandler());
-			//p.Add<Dialog.IHandler>(() => new DialogHandler());
+			p.Add<Dialog.IHandler>(() => new DialogHandler());
 			//p.Add<FontDialog.IHandler>(() => new FontDialogHandler());
 			p.Add<Form.IHandler>(() => new FormHandler());
 			//p.Add<FloatingForm.IHandler>(() => new FloatingFormHandler());

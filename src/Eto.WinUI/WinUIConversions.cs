@@ -172,7 +172,7 @@ public static class WinUIConversions
 		_ => TextAlignment.Left
 	};
 
-	public static muxm.Imaging.BitmapImage ToBitmapImage(this Bitmap bitmap)
+	public static muxm.Imaging.BitmapSource ToBitmapSource(this Bitmap bitmap)
 	{
 		var handler = (BitmapHandler)bitmap.Handler;
 		return handler.Control;

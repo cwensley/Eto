@@ -3,13 +3,13 @@ using System.IO;
 
 namespace Eto.WinUI.Drawing;
 
-public class IconHandler : WidgetHandler<BitmapImage, Icon>, Icon.IHandler
+public class IconHandler : WidgetHandler<BitmapSource, Icon>, Icon.IHandler
 {
 	public IconHandler()
 	{
 	}
 
-	public IconHandler(BitmapImage image)
+	public IconHandler(BitmapSource image)
 	{
 		Control = image;
 	}
@@ -46,9 +46,16 @@ public class IconHandler : WidgetHandler<BitmapImage, Icon>, Icon.IHandler
 	{
 		this.frames = frames.ToList();
 		if (this.frames.Count > 0)
-			Control = Widget.GetFrame(1).Bitmap.ToBitmapImage();
+			Control = Widget.GetFrame(1).Bitmap.ToBitmapSource();
 		
 	}
 
-	public IEnumerable<IconFrame> Frames => frames ?? Enumerable.Empty<IconFrame>();
+	public IEnumerable<IconFrame> Frames => frames ??= CreateFramesFromControl().ToList();
+	
+	private IEnumerable<IconFrame> CreateFramesFromControl()
+	{
+		if (Control == null)
+			yield break;
+		yield return new IconFrame(1, new Bitmap(new BitmapHandler(Control)));
+	}
 }

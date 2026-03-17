@@ -10,7 +10,7 @@ namespace Eto.WinUI.Forms.Controls;
 
 public class NumericStepperHandler : WinUIBorderedControl<muc.NumberBox, NumericStepper, NumericStepper.ICallback>, NumericStepper.IHandler
 {
-	muc.TextBox _textBox;
+	muc.TextBox? _textBox;
 	public muc.TextBox TextBox => _textBox ??= Control.FindVisualChild<muc.TextBox>();
 
 	static readonly object ReadOnlyProperty = new object();
