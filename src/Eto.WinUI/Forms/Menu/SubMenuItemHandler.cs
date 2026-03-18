@@ -1,54 +1,34 @@
 namespace Eto.WinUI.Forms.Menu;
 
-public class SubMenuItemHandler : MenuHandler<muc.MenuFlyoutSubItem, SubMenuItem, SubMenuItem.ICallback>, SubMenuItem.IHandler, IWinUIMenuItemHandler
+public class SubMenuItemHandler : MenuItemBaseHandler<muc.MenuFlyoutSubItem, SubMenuItem, SubMenuItem.ICallback>, SubMenuItem.IHandler, IWinUIMenuItemHandler
 {
-	Image? _image;
+	string? _text;
 
 	public SubMenuItemHandler()
 	{
 		Control = new muc.MenuFlyoutSubItem();
 	}
 
-	public Image? Image
+	protected override void OnImageSizeChanged()
 	{
-		get => _image;
+		Control.Icon = WinUIMenuHelper.CreateIcon(Image, WinUIMenuHelper.DefaultImageSize);
+	}
+
+	public override string? Text
+	{
+		get => _text;
 		set
 		{
-			_image = value;
-			Control.Icon = WinUIMenuHelper.CreateIcon(value, WinUIMenuHelper.DefaultImageSize);
+			_text = value;
+			WinUIMenuHelper.GetMenuTextAndAccessKey(value, out var menuText, out var accessKey);
+			Control.Text = menuText;
+			Control.AccessKey = accessKey;
+			if (MenuBarItem != null)
+			{
+				MenuBarItem.Title = menuText;
+				MenuBarItem.AccessKey = accessKey;
+			}
 		}
-	}
-
-	public string Text
-	{
-		get => WinUIMenuHelper.ToEtoText(Control.Text);
-		set => Control.Text = WinUIMenuHelper.ToPlatformText(value);
-	}
-
-	public string ToolTip
-	{
-		get => muc.ToolTipService.GetToolTip(Control) as string;
-		set => WinUIMenuHelper.SetToolTip(Control, value);
-	}
-
-	public Keys Shortcut
-	{
-		get => Keys.None;
-		set
-		{
-		}
-	}
-
-	public bool Enabled
-	{
-		get => Control.IsEnabled;
-		set => Control.IsEnabled = value;
-	}
-
-	public bool Visible
-	{
-		get => Control.Visibility == mux.Visibility.Visible;
-		set => Control.Visibility = value ? mux.Visibility.Visible : mux.Visibility.Collapsed;
 	}
 
 	public override void AttachEvent(string id)
@@ -58,6 +38,7 @@ public class SubMenuItemHandler : MenuHandler<muc.MenuFlyoutSubItem, SubMenuItem
 			case SubMenuItem.OpeningEvent:
 			case SubMenuItem.ClosedEvent:
 			case SubMenuItem.ClosingEvent:
+				// not supported by WinUI
 				break;
 			default:
 				base.AttachEvent(id);
@@ -65,12 +46,26 @@ public class SubMenuItemHandler : MenuHandler<muc.MenuFlyoutSubItem, SubMenuItem
 		}
 	}
 
+	protected override muc.MenuBarItem CreateMenuBarItem()
+	{
+		var item = base.CreateMenuBarItem();
+		foreach (var subItem in Widget.Items)
+		{
+			if (subItem.Handler is IWinUIMenuItemHandler handler && handler.NativeControlObject is muc.MenuFlyoutItemBase nativeControl)
+				item.Items.Add(nativeControl);
+		}
+		return item;
+	}
+
+
 	public void AddMenu(int index, MenuItem item)
 	{
 		if (item.Handler is not IWinUIMenuItemHandler handler || handler.NativeControlObject is not muc.MenuFlyoutItemBase nativeControl)
 			throw new NotSupportedException($"Menu item type '{item.GetType().Name}' is not supported in WinUI submenus.");
 
 		Control.Items.Insert(index, nativeControl);
+		if (MenuBarItem != null)
+			MenuBarItem.Items.Insert(index, nativeControl);
 	}
 
 	public void RemoveMenu(MenuItem item)
@@ -79,26 +74,26 @@ public class SubMenuItemHandler : MenuHandler<muc.MenuFlyoutSubItem, SubMenuItem
 			return;
 
 		Control.Items.Remove(nativeControl);
+		if (MenuBarItem != null)
+			MenuBarItem.Items.Remove(nativeControl);
 	}
 
 	public void Clear()
 	{
 		Control.Items.Clear();
+		if (MenuBarItem != null)
+			MenuBarItem.Items.Clear();
 	}
 
-	object? IWinUIMenuItemHandler.NativeControlObject => Control;
-
-	public void CreateFromCommand(Command command)
+	public override void Validate()
 	{
-	}
+		base.Validate();
 
-	public void Validate()
-	{
-		Callback.OnValidate(Widget, EventArgs.Empty);
 		foreach (var item in Widget.Items)
 		{
-			if (item.Handler is IMenuItemHandler handler)
+			if (item.Handler is IWinUIMenuItemHandler handler)
 				handler.Validate();
 		}
 	}
+
 }

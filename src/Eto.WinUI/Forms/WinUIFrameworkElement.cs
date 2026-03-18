@@ -365,8 +365,16 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 			case Eto.Forms.Control.MouseDoubleClickEvent:
 				MouseEventElement.DoubleTapped += HandleDoubleTapped;
 				break;
+			case Eto.Forms.Control.GotFocusEvent:
+				ContainerControl.GotFocus += (sender, e) => Callback.OnGotFocus(Widget, EventArgs.Empty);
+				break;
+			case Eto.Forms.Control.LostFocusEvent:
+				ContainerControl.LostFocus += (sender, e) => Callback.OnLostFocus(Widget, EventArgs.Empty);
+				break;
+			default:
+				base.AttachEvent(id);
+				break;
 		}
-		base.AttachEvent(id);
 	}
 
 	void HandlePointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)

@@ -29,11 +29,11 @@ public class ContextMenuHandler : WidgetHandler<muc.MenuFlyout, ContextMenu, Con
 		}
 	}
 
-	void Control_Opening(object sender, object e)
+	void Control_Opening(object? sender, object e)
 	{
 		foreach (var item in Widget.Items)
 		{
-			if (item.Handler is IMenuItemHandler handler)
+			if (item.Handler is IWinUIMenuItemHandler handler)
 				handler.Validate();
 		}
 		Callback.OnOpening(Widget, EventArgs.Empty);
@@ -44,7 +44,7 @@ public class ContextMenuHandler : WidgetHandler<muc.MenuFlyout, ContextMenu, Con
 		Callback.OnClosing(Widget, EventArgs.Empty);
 	}
 
-	void Control_Closed(object sender, object e)
+	void Control_Closed(object? sender, object e)
 	{
 		Callback.OnClosed(Widget, EventArgs.Empty);
 	}

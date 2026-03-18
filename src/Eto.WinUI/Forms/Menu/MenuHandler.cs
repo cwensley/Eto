@@ -10,9 +10,5 @@ internal interface IWinUIMenuItemHandler
 {
 	object? NativeControlObject { get; }
 	void Validate();
-}
-
-internal interface IWinUITopLevelMenuItemHandler
-{
 	muc.MenuBarItem GetTopLevelMenuBarItem();
 }

@@ -72,7 +72,7 @@ namespace Eto.WinUI
 			p.Add<DropDown.IHandler>(() => new DropDownHandler());
 			//p.Add<ComboBox.IHandler>(() => new ComboBoxHandler());
 			p.Add<ColorPicker.IHandler>(() => new ThemedColorPickerHandler());
-			//p.Add<DateTimePicker.IHandler>(() => new DateTimePickerHandler());
+			p.Add<DateTimePicker.IHandler>(() => new DateTimePickerHandler());
 			p.Add<Drawable.IHandler>(() => new DrawableHandler());
 			//p.Add<Expander.IHandler>(() => new ExpanderHandler());
 			p.Add<FontPicker.IHandler>(() => new ThemedFontPickerHandler());
@@ -102,7 +102,7 @@ namespace Eto.WinUI
 			//p.Add<TreeView.IHandler>(() => new TreeViewHandler());
 #pragma warning restore CS0618 // Type or member is obsolete
 			//p.Add<WebView.IHandler>(()  => new WebViewHandler ());
-			//p.Add<RichTextArea.IHandler>(() => new RichTextAreaHandler());
+			p.Add<RichTextArea.IHandler>(() => new RichTextAreaHandler());
 			p.Add<Stepper.IHandler>(() => new StepperHandler());
 			//p.Add<TextStepper.IHandler>(() => new TextStepperHandler());
 			p.Add<FilePicker.IHandler>(() => new ThemedFilePickerHandler());

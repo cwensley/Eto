@@ -9,19 +9,23 @@ public class MenuBarHandler : MenuHandler<muc.MenuBar, MenuBar, MenuBar.ICallbac
 
 	public void AddMenu(int index, MenuItem item)
 	{
-		Rebuild();
+		if (item.Handler is not IWinUIMenuItemHandler handler)
+			throw new NotSupportedException($"Menu item type '{item.GetType().Name}' is not supported in WinUI menu bars.");
+		Control.Items.Insert(index, handler.GetTopLevelMenuBarItem());
 	}
 
 	public void RemoveMenu(MenuItem item)
 	{
-		Rebuild();
+		if (item.Handler is not IWinUIMenuItemHandler handler)
+			return;
+		Control.Items.Remove(handler.GetTopLevelMenuBarItem());
 	}
 
 	public void Clear()
 	{
-		Rebuild();
+		Control.Items.Clear();
 	}
-
+	
 	MenuItem? _quitItem;
 	public void SetQuitItem(MenuItem item)
 	{
@@ -63,109 +67,4 @@ public class MenuBarHandler : MenuHandler<muc.MenuBar, MenuBar, MenuBar.ICallbac
 
 	public ButtonMenuItem HelpMenu => Widget.Items.GetSubmenu(Application.Instance.Localize(Widget, "&Help"), 1000);
 
-	void Rebuild()
-	{
-		Control.Items.Clear();
-		foreach (var item in Widget.Items)
-			Control.Items.Add(CreateTopLevelItem(item));
-	}
-
-	muc.MenuBarItem CreateTopLevelItem(MenuItem item)
-	{
-		var menuBarItem = new muc.MenuBarItem
-		{
-			Title = WinUIMenuHelper.ToEtoText(item.Text)?.Replace("&", "")
-		};
-
-		if (item is ButtonMenuItem submenu && submenu.Items.Count > 0)
-		{
-			foreach (var child in submenu.Items)
-				menuBarItem.Items.Add(CreateFlyoutItem(child));
-		}
-		else
-		{
-			menuBarItem.Items.Add(CreateFlyoutItem(item));
-		}
-
-		return menuBarItem;
-	}
-
-	static muc.MenuFlyoutItemBase CreateFlyoutItem(MenuItem item)
-	{
-		switch (item)
-		{
-			case SeparatorMenuItem:
-				return new muc.MenuFlyoutSeparator();
-			case CheckMenuItem checkItem:
-			{
-				var native = new muc.ToggleMenuFlyoutItem
-				{
-					Text = WinUIMenuHelper.ToPlatformText(checkItem.Text),
-					IsChecked = checkItem.Checked,
-					IsEnabled = checkItem.Enabled,
-					Visibility = checkItem.Visible ? mux.Visibility.Visible : mux.Visibility.Collapsed
-				};
-				WinUIMenuHelper.SetToolTip(native, checkItem.ToolTip);
-				native.Click += (_, _) =>
-				{
-					checkItem.PerformClick();
-					native.IsChecked = checkItem.Checked;
-				};
-				return native;
-			}
-			case RadioMenuItem radioItem:
-			{
-				var native = new muc.RadioMenuFlyoutItem
-				{
-					Text = WinUIMenuHelper.ToPlatformText(radioItem.Text),
-					IsChecked = radioItem.Checked,
-					IsEnabled = radioItem.Enabled,
-					Visibility = radioItem.Visible ? mux.Visibility.Visible : mux.Visibility.Collapsed,
-					GroupName = radioItem.Handler is RadioMenuItemHandler radioHandler ? radioHandler.GroupName : Guid.NewGuid().ToString("N")
-				};
-				WinUIMenuHelper.SetToolTip(native, radioItem.ToolTip);
-				native.Click += (_, _) =>
-				{
-					radioItem.PerformClick();
-					native.IsChecked = radioItem.Checked;
-				};
-				return native;
-			}
-			case ButtonMenuItem submenu when submenu.Items.Count > 0:
-			{
-				var native = new muc.MenuFlyoutSubItem
-				{
-					Text = WinUIMenuHelper.ToPlatformText(submenu.Text),
-					IsEnabled = submenu.Enabled,
-					Visibility = submenu.Visible ? mux.Visibility.Visible : mux.Visibility.Collapsed
-				};
-				WinUIMenuHelper.SetToolTip(native, submenu.ToolTip);
-				if (submenu.Image != null)
-					native.Icon = WinUIMenuHelper.CreateIcon(submenu.Image, WinUIMenuHelper.DefaultImageSize);
-				foreach (var child in submenu.Items)
-					native.Items.Add(CreateFlyoutItem(child));
-				return native;
-			}
-			case ButtonMenuItem buttonItem:
-			{
-				var native = new muc.MenuFlyoutItem
-				{
-					Text = WinUIMenuHelper.ToPlatformText(buttonItem.Text),
-					IsEnabled = buttonItem.Enabled,
-					Visibility = buttonItem.Visible ? mux.Visibility.Visible : mux.Visibility.Collapsed,
-					KeyboardAcceleratorTextOverride = buttonItem.Shortcut == Keys.None ? null : buttonItem.Shortcut.ToShortcutString()
-				};
-				var accelerator = WinUIMenuHelper.CreateKeyboardAccelerator(buttonItem.Shortcut);
-				if (accelerator != null)
-					native.KeyboardAccelerators.Add(accelerator);
-				WinUIMenuHelper.SetToolTip(native, buttonItem.ToolTip);
-				if (buttonItem.Image != null)
-					native.Icon = WinUIMenuHelper.CreateIcon(buttonItem.Image, WinUIMenuHelper.DefaultImageSize);
-				native.Click += (_, _) => buttonItem.PerformClick();
-				return native;
-			}
-			default:
-				throw new NotSupportedException($"Menu item type '{item.GetType().Name}' is not supported in WinUI menu bars.");
-		}
-	}
 }
