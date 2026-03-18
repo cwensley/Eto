@@ -70,7 +70,7 @@ namespace Eto.WinUI
 			//p.Add<Calendar.IHandler>(() => new CalendarHandler());
 			p.Add<CheckBox.IHandler>(() => new CheckBoxHandler());
 			p.Add<DropDown.IHandler>(() => new DropDownHandler());
-			//p.Add<ComboBox.IHandler>(() => new ComboBoxHandler());
+			p.Add<ComboBox.IHandler>(() => new ComboBoxHandler());
 			p.Add<ColorPicker.IHandler>(() => new ThemedColorPickerHandler());
 			p.Add<DateTimePicker.IHandler>(() => new DateTimePickerHandler());
 			p.Add<Drawable.IHandler>(() => new DrawableHandler());
@@ -104,7 +104,7 @@ namespace Eto.WinUI
 			//p.Add<WebView.IHandler>(()  => new WebViewHandler ());
 			p.Add<RichTextArea.IHandler>(() => new RichTextAreaHandler());
 			p.Add<Stepper.IHandler>(() => new StepperHandler());
-			//p.Add<TextStepper.IHandler>(() => new TextStepperHandler());
+			p.Add<TextStepper.IHandler>(() => new TextStepperHandler());
 			p.Add<FilePicker.IHandler>(() => new ThemedFilePickerHandler());
 			p.Add<DocumentControl.IHandler>(() => new ThemedDocumentControlHandler());
 			p.Add<DocumentPage.IHandler>(() => new ThemedDocumentPageHandler());
@@ -145,10 +145,10 @@ namespace Eto.WinUI
 			p.Add<ColorDialog.IHandler>(() => new ThemedColorDialogHandler());
 			//p.Add<Cursor.IHandler>(() => new CursorHandler());
 			p.Add<Dialog.IHandler>(() => new DialogHandler());
-			//p.Add<FontDialog.IHandler>(() => new FontDialogHandler());
+			p.Add<FontDialog.IHandler>(() => new ThemedFontDialogHandler());
 			p.Add<Form.IHandler>(() => new FormHandler());
 			//p.Add<FloatingForm.IHandler>(() => new FloatingFormHandler());
-			//p.Add<MessageBox.IHandler>(() => new MessageBoxHandler());
+			// p.Add<MessageBox.IHandler>(() => new ThemedMessageBoxHandler());
 			//p.Add<OpenFileDialog.IHandler>(() => new OpenFileDialogHandler());
 			//p.Add<OpenWithDialog.IHandler>(() => new OpenWithDialogHandler());
 			//p.Add<PixelLayout.IHandler>(() => new PixelLayoutHandler());

@@ -33,6 +33,37 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+	<Style TargetType="local:EtoButtonSpinner">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="local:EtoButtonSpinner">
+					<Border
+						Background="{TemplateBinding Background}"
+						BorderBrush="{TemplateBinding BorderBrush}"
+						BorderThickness="{TemplateBinding BorderThickness}"
+						Padding="{TemplateBinding Padding}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="*" />
+								<ColumnDefinition Width="Auto" />
+							</Grid.ColumnDefinitions>
+							<ContentPresenter
+								x:Name="PART_ContentPresenter"
+								Grid.Column="0"
+								Content="{TemplateBinding Content}"
+								ContentTemplate="{TemplateBinding ContentTemplate}"
+								ContentTransitions="{TemplateBinding ContentTransitions}"
+								HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+								VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+							<local:SpinButton
+								x:Name="PART_SpinButton"
+								Grid.Column="1" />
+						</Grid>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 	<Style TargetType="controls:EtoContentControl">
 		<Setter Property="Template">
 			<Setter.Value>

@@ -3,12 +3,12 @@ namespace Eto.WinUI.Forms.Controls;
 
 public interface IEtoBindingSource<T>
 {
-	IIndirectBinding<T> Binding { get; }
+	IIndirectBinding<T>? Binding { get; }
 }
 
 public class EtoComboBox : muc.ComboBox, IEtoBindingSource<string>
 {
-	public IWinUIFrameworkElement Handler { get; set; }
+	public IWinUIFrameworkElement? Handler { get; set; }
 	public IIndirectBinding<string>? Binding { get; set; }
 
 	protected override wf.Size MeasureOverride(wf.Size availableSize)
@@ -16,7 +16,15 @@ public class EtoComboBox : muc.ComboBox, IEtoBindingSource<string>
 		return Handler?.MeasureOverride(availableSize, base.MeasureOverride) ?? base.MeasureOverride(availableSize);
 	}
 }
-public class DropDownHandler : WinUIControl<EtoComboBox, DropDown, DropDown.ICallback>, DropDown.IHandler
+
+public class DropDownHandler : DropDownHandler<EtoComboBox, DropDown, DropDown.ICallback>, DropDown.IHandler
+{
+}
+
+public class DropDownHandler<TControl, TWidget, TCallback> : WinUIControl<TControl, TWidget, TCallback>, DropDown.IHandler
+	where TControl : EtoComboBox, new()
+	where TWidget : DropDown
+	where TCallback : DropDown.ICallback
 {
 	public bool ShowBorder { get; set; }
 	IEnumerable<object>? _store;
@@ -51,7 +59,7 @@ public class DropDownHandler : WinUIControl<EtoComboBox, DropDown, DropDown.ICal
 		set => _itemKeyBinding = value;
 	}
 
-	protected override EtoComboBox CreateControl() => new EtoComboBox { Handler = this };
+	protected override TControl CreateControl() => new TControl { Handler = this };
 	protected override void Initialize()
 	{
 		base.Initialize();
@@ -62,6 +70,22 @@ public class DropDownHandler : WinUIControl<EtoComboBox, DropDown, DropDown.ICal
 	private void Control_SelectionChanged(object sender, muc.SelectionChangedEventArgs e)
 	{
 		Callback.OnSelectedIndexChanged(Widget, EventArgs.Empty);
+	}
+
+	public override void AttachEvent(string id)
+	{
+		switch (id)
+		{
+			case DropDown.DropDownOpeningEvent:
+				Control.DropDownOpened += (sender, e) => Callback.OnDropDownOpening(Widget, EventArgs.Empty);
+				break;
+			case DropDown.DropDownClosedEvent:
+				Control.DropDownClosed += (sender, e) => Callback.OnDropDownClosed(Widget, EventArgs.Empty);
+				break;
+			default:
+				base.AttachEvent(id);
+				break;
+		}
 	}
 
 }
