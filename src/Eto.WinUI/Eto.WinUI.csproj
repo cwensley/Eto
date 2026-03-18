@@ -37,4 +37,13 @@
     <ProjectReference Include="..\Eto\Eto.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Eto.Mac\Drawing\SplineHelper.cs">
+      <Link>Drawing\SplineHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\Shared\FixedMaskedTextProviderHandler.cs">
+      <Link>Forms\FixedMaskedTextProviderHandler.cs</Link>
+    </Compile>
+  </ItemGroup>
+
 </Project>

@@ -76,4 +76,14 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 	{
 		Control.Invalidate();
 	}
+
+	public override void Invalidate(bool invalidateChildren)
+	{
+		Control.Invalidate();
+	}
+
+	public override void Invalidate(Rectangle rect, bool invalidateChildren)
+	{
+		Control.Invalidate();
+	}
 }

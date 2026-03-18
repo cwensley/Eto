@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 
 namespace Eto.WinUI.Drawing;
@@ -12,6 +13,8 @@ internal interface IWinUIImage
 public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandler, IWinUIImage
 {
 	BitmapSource? _source;
+	byte[]? _encodedData;
+	string? _fileName;
 
 	public BitmapHandler()
 	{
@@ -28,13 +31,17 @@ public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandle
 		var uri = new System.Uri("file:///" + fileName.Replace("\\", "/"));
 		Control = new BitmapImage(uri);
 		_source = Control;
+		_fileName = fileName;
+		_encodedData = null;
 	}
 
 	public void Create(Stream stream)
 	{
+		_fileName = null;
 		var bitmap = new BitmapImage();
 		using var ms = new MemoryStream();
 		stream.CopyTo(ms);
+		_encodedData = ms.ToArray();
 		ms.Position = 0;
 		bitmap.SetSource(ms.AsRandomAccessStream());
 		Control = bitmap;
@@ -45,12 +52,16 @@ public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandle
 	{
 		Control = new WriteableBitmap(width, height);
 		_source = Control;
+		_fileName = null;
+		_encodedData = null;
 	}
 
 	public void Create(int width, int height, Graphics graphics)
 	{
 		Control = new WriteableBitmap(width, height);
 		_source = Control;
+		_fileName = null;
+		_encodedData = null;
 	}
 
 	public void Create(Image image, int width, int height, ImageInterpolation interpolation)
@@ -58,6 +69,8 @@ public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandle
 		// Not implemented: requires image resizing logic.
 		Control = new BitmapImage();
 		_source = new WriteableBitmap(width, height);
+		_fileName = null;
+		_encodedData = null;
 	}
 
 	public Size Size
@@ -71,9 +84,15 @@ public class BitmapHandler : WidgetHandler<BitmapSource, Bitmap>, Bitmap.IHandle
 		}
 	}
 
-	internal void SetBitmap(BitmapSource source)
+	internal string? FileName => _fileName;
+
+	internal byte[]? EncodedData => _encodedData;
+
+	internal void SetBitmap(BitmapSource source, byte[]? encodedData = null, string? fileName = null)
 	{
 		_source = source;
+		_encodedData = encodedData;
+		_fileName = fileName;
 		if (source is BitmapImage bitmapImage)
 			Control = bitmapImage;
 	}

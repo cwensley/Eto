@@ -155,13 +155,36 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	public virtual PointF PointFromScreen(PointF point)
 	{
-		throw new NotImplementedException();
+		if (!Widget.Loaded)
+			return point;
+
+		var root = ContainerControl.XamlRoot?.Content as mux.UIElement;
+		if (root == null)
+			return point;
+
+		var windowPosition = GetWindowScreenPosition();
+		if (windowPosition == null)
+			return point;
+
+		var rootPoint = point - ScreenHandler.PhysicalToLogical(windowPosition.Value);
+		return root.TransformToVisual(ContainerControl).TransformPoint(rootPoint.ToWinUI()).ToEto();
 	}
 
 	public virtual PointF PointToScreen(PointF point)
 	{
-		throw new NotImplementedException();
-		//ContainerControl.TransformToVisual()
+		if (!Widget.Loaded)
+			return point;
+
+		var root = ContainerControl.XamlRoot?.Content as mux.UIElement;
+		if (root == null)
+			return point;
+
+		var windowPosition = GetWindowScreenPosition();
+		if (windowPosition == null)
+			return point;
+
+		var rootPoint = ContainerControl.TransformToVisual(root).TransformPoint(point.ToWinUI()).ToEto();
+		return ScreenHandler.PhysicalToLogical(windowPosition.Value) + rootPoint;
 	}
 
 	public void ReleaseMouseCapture()
@@ -303,7 +326,16 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	protected virtual mux.FrameworkElement MouseEventElement => ContainerControl;
 
-	public ContextMenu ContextMenu { get; set; }
+	ContextMenu _contextMenu;
+	public ContextMenu ContextMenu
+	{
+		get => _contextMenu;
+		set
+		{
+			_contextMenu = value;
+			ContainerControl.ContextFlyout = value?.ControlObject as muc.MenuFlyout;
+		}
+	}
 
 	public override void AttachEvent(string id)
 	{
@@ -488,6 +520,15 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		if (modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Windows))
 			keys |= Keys.Application;
 		return keys;
+	}
+
+	PointF? GetWindowScreenPosition()
+	{
+		if (Widget.ParentWindow?.Handler is not IWinUIWindow window)
+			return null;
+
+		var position = window.Control.AppWindow.Position;
+		return new PointF(position.X, position.Y);
 	}
 
 }

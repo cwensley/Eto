@@ -1,11 +1,14 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Brushes;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Graphics.DirectX;
 using Windows.Storage.Streams;
 
 namespace Eto.WinUI.Drawing;
@@ -120,17 +123,18 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	public void DrawImage(Image image, float x, float y)
 	{
-		throw new NotSupportedException("WinUI image drawing requires a Win2D-backed image handler, which is not implemented yet.");
+		var size = image.Size;
+		DrawImage(image, x, y, size.Width, size.Height);
 	}
 
 	public void DrawImage(Image image, float x, float y, float width, float height)
 	{
-		throw new NotSupportedException("WinUI image drawing requires a Win2D-backed image handler, which is not implemented yet.");
+		DrawImageCore(image, null, new RectangleF(x, y, width, height));
 	}
 
 	public void DrawImage(Image image, RectangleF source, RectangleF destination)
 	{
-		throw new NotSupportedException("WinUI image drawing requires a Win2D-backed image handler, which is not implemented yet.");
+		DrawImageCore(image, source, destination);
 	}
 
 	public void DrawLine(Pen pen, float startx, float starty, float endx, float endy)
@@ -329,10 +333,11 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 		using var stream = new InMemoryRandomAccessStream();
 		_renderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png).AsTask().GetAwaiter().GetResult();
+		var encodedData = ReadAllBytes(stream);
 		stream.Seek(0);
 		var bitmapImage = new BitmapImage();
 		bitmapImage.SetSource(stream);
-		bitmapHandler.SetBitmap(bitmapImage);
+		bitmapHandler.SetBitmap(bitmapImage, encodedData);
 
 		InitializeDrawingSession(_renderTarget.CreateDrawingSession());
 		Control.Transform = transform;
@@ -394,16 +399,80 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	static void CopySourceImage(CanvasRenderTarget renderTarget, Bitmap image)
 	{
-		if (image.Handler is not IWinUIImage winUIImage)
+		using var imageRef = CreateImageReference(renderTarget, image);
+		if (imageRef.Image == null)
 			return;
 
-		var source = winUIImage.GetImageClosestToSize(1f, image.Size);
-		if (source is not BitmapImage bitmapImage || bitmapImage.UriSource == null || !bitmapImage.UriSource.IsFile)
-			return;
-
-		using var canvasBitmap = CanvasBitmap.LoadAsync(renderTarget, bitmapImage.UriSource.LocalPath).AsTask().GetAwaiter().GetResult();
 		using var drawingSession = renderTarget.CreateDrawingSession();
-		drawingSession.DrawImage(canvasBitmap, 0, 0);
+		drawingSession.DrawImage(imageRef.Image, 0, 0);
+	}
+
+	void DrawImageCore(Image image, RectangleF? source, RectangleF destination)
+	{
+		if (image == null || destination.Width == 0 || destination.Height == 0)
+			return;
+
+		using var imageRef = CreateImageReference(Control, image);
+		if (imageRef.Image == null)
+			throw new NotSupportedException("WinUI image drawing requires a Win2D-compatible image source.");
+
+		var sourceRect = source?.ToWinUI() ?? imageRef.SourceBounds;
+		Control.DrawImage(imageRef.Image, destination.ToWinUI(), sourceRect, 1f, ToCanvasInterpolation(ImageInterpolation));
+	}
+
+	static ImageReference CreateImageReference(ICanvasResourceCreator resourceCreator, Image image)
+	{
+		if (image.Handler is not BitmapHandler bitmapHandler)
+			return default;
+
+		var source = bitmapHandler.GetImageClosestToSize(1f, image.Size);
+		if (source == null)
+			return default;
+
+		if (source is WriteableBitmap writeableBitmap)
+		{
+			var bytes = writeableBitmap.PixelBuffer.ToArray();
+			var canvasBitmap = CanvasBitmap.CreateFromBytes(
+				resourceCreator,
+				bytes,
+				writeableBitmap.PixelWidth,
+				writeableBitmap.PixelHeight,
+				DirectXPixelFormat.B8G8R8A8UIntNormalized,
+				96f);
+			return new ImageReference(canvasBitmap, new RectangleF(0, 0, writeableBitmap.PixelWidth, writeableBitmap.PixelHeight).ToWinUI());
+		}
+
+		if (!string.IsNullOrEmpty(bitmapHandler.FileName))
+		{
+			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, bitmapHandler.FileName).AsTask().GetAwaiter().GetResult();
+			return new ImageReference(canvasBitmap, new RectangleF(0, 0, source.PixelWidth, source.PixelHeight).ToWinUI());
+		}
+
+		if (bitmapHandler.EncodedData != null)
+		{
+			using var stream = new MemoryStream(bitmapHandler.EncodedData);
+			using var randomAccessStream = stream.AsRandomAccessStream();
+			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, randomAccessStream).AsTask().GetAwaiter().GetResult();
+			return new ImageReference(canvasBitmap, new RectangleF(0, 0, canvasBitmap.SizeInPixels.Width, canvasBitmap.SizeInPixels.Height).ToWinUI());
+		}
+
+		if (source is BitmapImage bitmapImage && bitmapImage.UriSource?.IsFile == true)
+		{
+			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, bitmapImage.UriSource.LocalPath).AsTask().GetAwaiter().GetResult();
+			return new ImageReference(canvasBitmap, new RectangleF(0, 0, canvasBitmap.SizeInPixels.Width, canvasBitmap.SizeInPixels.Height).ToWinUI());
+		}
+
+		return default;
+	}
+
+	static byte[] ReadAllBytes(IRandomAccessStream stream)
+	{
+		stream.Seek(0);
+		using var input = stream.GetInputStreamAt(0);
+		using var readStream = input.AsStreamForRead();
+		using var memory = new MemoryStream();
+		readStream.CopyTo(memory);
+		return memory.ToArray();
 	}
 
 	static CanvasTextFormat CreateTextFormat(Font font)
@@ -438,6 +507,23 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	static float DegreesToRadians(float degrees) => degrees * MathF.PI / 180f;
 
 	static Vector2 ToVector(PointF point) => new(point.X, point.Y);
+
+	static CanvasImageInterpolation ToCanvasInterpolation(ImageInterpolation interpolation)
+	{
+		return interpolation switch
+		{
+			ImageInterpolation.None => CanvasImageInterpolation.NearestNeighbor,
+			ImageInterpolation.Low => CanvasImageInterpolation.Linear,
+			ImageInterpolation.Medium => CanvasImageInterpolation.Cubic,
+			ImageInterpolation.High => CanvasImageInterpolation.Anisotropic,
+			_ => CanvasImageInterpolation.Linear,
+		};
+	}
+
+	readonly record struct ImageReference(CanvasBitmap? Image, Windows.Foundation.Rect SourceBounds) : IDisposable
+	{
+		public void Dispose() => Image?.Dispose();
+	}
 
 	Vector2 TransformPoint(PointF point) => Vector2.Transform(ToVector(point), Control.Transform);
 
