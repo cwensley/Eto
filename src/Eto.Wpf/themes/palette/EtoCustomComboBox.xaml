@@ -39,17 +39,9 @@
     <!-- Corner radius is inherited from the shared Eto.Palette.CornerRadius key (see
          themes/palette.xaml), so the DateTimePicker matches the DropDown / TextBox rounding. -->
 
-    <!-- == State brushes referenced by the template triggers ================ -->
-    <!-- Keyboard-focus background stays on the surface color (only the border
-         changes), mirroring EtoComboBox's focus behavior -->
-    <SolidColorBrush x:Key="TextControlBackgroundFocused"
-                     Color="{DynamicResource Eto.Palette.Surface.Color}" />
-    <!-- Focus border uses the accent color, same as EtoComboBox -->
-    <SolidColorBrush x:Key="TextControlBorderBrushFocused"
-                     Color="{DynamicResource Eto.Palette.Accent.Color}" />
-    <!-- Hover (mouse-over, not focused) background - keep the surface color so
-         the control stays flat like the DropDown -->
-    <SolidColorBrush x:Key="TextControlBackgroundPointerOver"
-                     Color="{DynamicResource Eto.Palette.Surface.Color}" />
+    <!-- The state brushes its template triggers use (TextControlBackgroundFocused,
+         TextControlBorderBrushFocused, TextControlBackgroundPointerOver) are the shared
+         text-input keys defined in themes/palette.xaml, so the focus / hover behavior
+         matches the TextBox, DropDown and NumericStepper skins. -->
 
 </ResourceDictionary>

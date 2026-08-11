@@ -108,8 +108,15 @@
         </Setter>
     </Style>
 
+    <!-- EtoWatermarkTextBox is used for a plain TextBox, but it is also hosted inside the
+         EtoButtonSpinner (NumericStepper / TextStepper) and the EtoCustomComboBox edit area
+         (DateTimePicker). Its fill therefore comes from the shared TextControlBackground* keys
+         (see themes/palette.xaml), which those templates blank out to Transparent for their
+         content - otherwise this would paint a rectangle inside the outer chrome that reads as
+         an inner border. Standalone the keys resolve to the palette Surface / DisabledBackground
+         colors, so a plain TextBox is unaffected. -->
     <Style TargetType="{x:Type efc:EtoWatermarkTextBox}">
-        <Setter Property="Background"      Value="{DynamicResource Eto.Palette.SurfaceBrush}" />
+        <Setter Property="Background"      Value="{DynamicResource TextControlBackground}" />
         <Setter Property="Foreground"      Value="{DynamicResource Eto.Palette.ForegroundBrush}" />
         <Setter Property="BorderBrush"     Value="{DynamicResource Eto.Palette.BorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
@@ -168,7 +175,7 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="MainBorder" Property="Background"
-                                    Value="{DynamicResource Eto.Palette.DisabledBackgroundBrush}" />
+                                    Value="{DynamicResource TextControlBackgroundDisabled}" />
                             <Setter TargetName="MainBorder" Property="BorderBrush"
                                     Value="{DynamicResource Eto.Palette.DisabledBorderBrush}" />
                             <Setter Property="Foreground"
