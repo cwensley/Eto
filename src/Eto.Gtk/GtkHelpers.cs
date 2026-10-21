@@ -61,7 +61,7 @@ namespace Eto.Forms
 
 			foreach (var w in Application.Instance.Windows)
 			{
-				if (ReferenceEquals(w.ControlObject, window))
+				if (!w.IsDisposed && ReferenceEquals(w.ControlObject, window))
 					return w;
 			}
 			
