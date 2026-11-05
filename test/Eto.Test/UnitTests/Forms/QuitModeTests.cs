@@ -125,29 +125,36 @@ public class QuitModeTests : TestBase
 	});
 
 	[Test]
-	public void LastWindowClosedShouldCountFormsLeftByClosedOwner() => QuitTest(QuitMode.LastWindowClosed, async q =>
+	public void OwnedWindowsShouldCloseWithOwner() => QuitTest(QuitMode.Explicit, async q =>
+	{
+		var owner = q.Show();
+		var owned = q.Show(owner: owner);
+		var ownedOfOwned = q.Show(owner: owned);
+		var other = q.Show();
+
+		await CloseAsync(owner);
+		await WaitUntil(() => !IsOpen(owned) && !IsOpen(ownedOfOwned));
+		Assert.That(IsOpen(other), Is.True, "Unrelated form should stay open");
+	});
+
+	[Test]
+	public void LastWindowClosedShouldQuitWhenClosingOtherFormAfterOwner() => QuitTest(QuitMode.LastWindowClosed, async q =>
 	{
 		var owner = q.Show();
 		var other = q.Show();
 		var owned = q.Show(owner: owner);
 
 		Assert.That(await q.CloseAsks(owner), Is.False, "Closing owner");
-
-		// Wpf and WinForms close owned windows along with their owner
-		if (IsOpen(owned))
-		{
-			Assert.That(await q.CloseAsks(other), Is.False, "Closing other form with orphaned form open");
-			Assert.That(await q.CloseAsks(owned), Is.True, "Closing orphaned form");
-		}
-		else
-			Assert.That(await q.CloseAsks(other), Is.True, "Closing other form");
+		Assert.That(IsOpen(owned), Is.False, "Owned form should close with its owner");
+		Assert.That(await q.CloseAsks(other), Is.True, "Closing other form");
 	});
 
 	[Test]
 	public void LastWindowClosedShouldNotQuitWhileDialogIsOpen() => QuitTest(QuitMode.LastWindowClosed, async q =>
 	{
 		var form = q.Show();
-		var dialog = await q.ShowDialogAsync(form);
+		// not owned by the form, or it would close along with it
+		var dialog = await q.ShowDialogAsync();
 
 		Assert.That(await q.CloseAsks(form), Is.False, "Closing last form with a dialog open");
 		Assert.That(await q.CloseAsks(dialog), Is.True, "Closing the dialog");

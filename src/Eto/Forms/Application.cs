@@ -315,7 +315,8 @@ public class Application : Widget
 
 	internal void OnWindowClosing(Window window, CancelEventArgs e)
 	{
-		if (e.Cancel || isAttached || !QuitsWhenClosing(window))
+		// a quit is already approved, e.g. windows owned by the closing window are closing along with it
+		if (e.Cancel || isAttached || quitWhenClosed != null || !QuitsWhenClosing(window))
 			return;
 		RaiseTerminating(e);
 		if (!e.Cancel && !isQuitting)
@@ -324,6 +325,10 @@ public class Application : Widget
 
 	internal void OnWindowClosed(Window window)
 	{
+		// Wpf and WinForms already do this natively, the others would leave them open or hidden
+		foreach (var owned in windows.Where(r => ReferenceEquals(r.Owner, window)).ToList())
+			owned.Close();
+
 		if (!ReferenceEquals(window, quitWhenClosed))
 			return;
 		quitWhenClosed = null;

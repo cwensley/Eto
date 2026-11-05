@@ -433,6 +433,7 @@ public abstract class Window : Panel
 	/// For a <see cref="Dialog"/>, this will be the window that will be disabled while the modal dialog is shown.
 	/// With a  <see cref="Form"/>, the specified owner will always be below the current window when shown, and will 
 	/// still be responsive to user input.  Typically, but not always, the window will move along with the owner.
+	/// Closing the owner also closes the windows it owns.
 	/// </remarks>
 	/// <value>The owner of this window.</value>
 	public Window Owner
