@@ -33,6 +33,9 @@ public abstract class WinUIPanel<TControl, TWidget, TCallback> : WinUIContainer<
 
 	EtoContentControl _border;
 
+	/// <summary>Gets the element that hosts the content, inside any chrome the panel adds.</summary>
+	protected EtoContentControl ContentBorder => _border;
+
 	public WinUIPanel()
 	{
 		_border = new EtoContentControl { Handler = this };

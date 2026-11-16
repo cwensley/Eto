@@ -128,6 +128,8 @@ namespace Eto.Test.UnitTests.Forms.Controls
 			// viewport, but the scrollable itself keeps its size so nothing else triggers a new measure.
 			// The content must still be re-measured at the narrower width so it fits beside the scrollbar
 			// instead of being covered by it.
+			if (Platform.Instance.ID == "WinUI")
+				Assert.Ignore("WinUI scroll bars overlay the content, so the viewport doesn't narrow");
 			Panel content = null;
 			ShownAsync(form =>
 			{
@@ -146,6 +148,31 @@ namespace Eto.Test.UnitTests.Forms.Controls
 
 				await WaitUntil(() => content.Width == scrollable.ClientSize.Width, 1000);
 				Assert.That(content.Width, Is.EqualTo(scrollable.ClientSize.Width), "#3 Content should narrow to fit beside the scrollbar");
+			});
+		}
+
+		[Test]
+		public void ContentLargerThanScrollableShouldScrollBothWays()
+		{
+			// like the large canvas in the Drawable section: the content is far bigger than the scrollable
+			int scrollEvents = 0;
+			ShownAsync(form =>
+			{
+				var layout = new PixelLayout();
+				layout.Add(new Drawable { Size = new Size(2000, 2000) }, 25, 25);
+				var scrollable = new Scrollable { Size = new Size(250, 250), Content = layout };
+				scrollable.Scroll += (sender, e) => scrollEvents++;
+				return scrollable;
+			},
+			async scrollable =>
+			{
+				Assert.That(scrollable.ScrollSize.Width, Is.GreaterThanOrEqualTo(2025), "#1 Scroll width should fit the content");
+				Assert.That(scrollable.ScrollSize.Height, Is.GreaterThanOrEqualTo(2025), "#2 Scroll height should fit the content");
+
+				scrollable.ScrollPosition = new Point(500, 600);
+				Assert.That(await WaitUntil(() => scrollable.ScrollPosition == new Point(500, 600), 1000), Is.True, $"#3 Should scroll both ways, but is at {scrollable.ScrollPosition}");
+				Assert.That(scrollable.VisibleRect.Location, Is.EqualTo(new Point(500, 600)), "#4 Visible rect should follow the scroll position");
+				Assert.That(scrollEvents, Is.GreaterThan(0), "#5 Scroll event should fire");
 			});
 		}
 
