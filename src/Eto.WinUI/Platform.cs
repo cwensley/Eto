@@ -6,6 +6,7 @@ using Eto.WinUI.Forms;
 using Eto.WinUI.Forms.Controls;
 using Eto.WinUI.Forms.Menu;
 using Eto.WinUI.Forms.ToolBars;
+using Eto.WinUI.Forms.Printing;
 using Eto.WinUI.Drawing;
 
 namespace Eto.WinUI
@@ -102,7 +103,7 @@ namespace Eto.WinUI
 #pragma warning disable CS0618 // Type or member is obsolete
 			//p.Add<TreeView.IHandler>(() => new TreeViewHandler());
 #pragma warning restore CS0618 // Type or member is obsolete
-			//p.Add<WebView.IHandler>(()  => new WebViewHandler ());
+			p.Add<WebView.IHandler>(() => new WebViewHandler());
 			p.Add<RichTextArea.IHandler>(() => new RichTextAreaHandler());
 			p.Add<Stepper.IHandler>(() => new StepperHandler());
 			p.Add<TextStepper.IHandler>(() => new TextStepperHandler());
@@ -126,10 +127,10 @@ namespace Eto.WinUI
 			p.Add<SubMenuItem.IHandler>(() => new SubMenuItemHandler());
 
 			// Forms.Printing
-			//p.Add<PrintDialog.IHandler>(() => new PrintDialogHandler());
-			//p.Add<PrintPreviewDialog.IHandler>(() => new PrintPreviewDialogHandler());
-			//p.Add<PrintDocument.IHandler>(() => new PrintDocumentHandler());
-			//p.Add<PrintSettings.IHandler>(() => new PrintSettingsHandler());
+			p.Add<PrintDialog.IHandler>(() => new PrintDialogHandler());
+			p.Add<PrintPreviewDialog.IHandler>(() => new PrintPreviewDialogHandler());
+			p.Add<PrintDocument.IHandler>(() => new PrintDocumentHandler());
+			p.Add<PrintSettings.IHandler>(() => new PrintSettingsHandler());
 
 			// Forms.ToolBar
 			p.Add<CheckToolItem.IHandler>(() => new CheckToolItemHandler());
@@ -165,11 +166,11 @@ namespace Eto.WinUI
 			p.Add<Screen.IScreensHandler>(() => new ScreensHandler());
 			//p.Add<Keyboard.IHandler>(() => new KeyboardHandler());
 			p.Add<FixedMaskedTextProvider.IHandler>(() => new Eto.Shared.Forms.FixedMaskedTextProviderHandler());
-			//p.Add<TrayIndicator.IHandler>(() => new TrayIndicatorHandler());
-			//p.Add<Notification.IHandler>(() => new NotificationHandler());
+			p.Add<TrayIndicator.IHandler>(() => new TrayIndicatorHandler());
+			p.Add<Notification.IHandler>(() => new NotificationHandler());
 			//p.Add<DataObject.IHandler>(() => new DataObjectHandler());
 			//p.Add<DataFormats.IHandler>(() => new DataFormatsHandler());
-			//p.Add<Taskbar.IHandler>(() => new TaskbarHandler());
+			p.Add<Taskbar.IHandler>(() => new TaskbarHandler());
 			//p.Add<Window.IWindowHandler>(() => new WindowHandler());
 
 			// IO

@@ -20,11 +20,18 @@ public class IconHandler : WidgetHandler<Icon>, Icon.IHandler, IWinUIImage
 
 	public void Create(Stream stream)
 	{
+		using var ms = new MemoryStream();
+		stream.CopyTo(ms);
+		EncodedData = ms.ToArray();
+		ms.Position = 0;
 		// each frame of an .ico becomes its own bitmap at scale 1, like other platforms
-		_frames = WinUIImageHelper.Decode(stream, true)
+		_frames = WinUIImageHelper.Decode(ms, true)
 			.Select(r => IconFrame.FromControlObject(1f, new Bitmap(new BitmapHandler(r.Width, r.Height, r.Pixels))))
 			.ToList();
 	}
+
+	// kept for native icons (e.g. the tray), which need the original sizes
+	internal byte[]? EncodedData { get; private set; }
 
 	public void Create(string fileName)
 	{
