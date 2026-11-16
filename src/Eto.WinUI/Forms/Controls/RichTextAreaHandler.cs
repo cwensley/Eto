@@ -17,9 +17,8 @@ public class EtoRichEditBox : muc.RichEditBox
 
 public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, RichTextArea.ICallback>, RichTextArea.IHandler, ITextBuffer
 {
-	int _suppressSelectionChanged;
 	int _suppressTextChanged;
-	int? _lastCaretIndex;
+	int _lastCaretIndex;
 	Range<int> _lastSelection;
 	bool _acceptsTab = true;
 	bool _acceptsReturn = true;
@@ -39,6 +38,10 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		UserPreferredSize = DefaultSize;
 		_lastSelection = Selection;
 		_lastCaretIndex = CaretIndex;
+		// TextChanging is raised synchronously, for programmatic and formatting changes too, unlike TextChanged
+		Control.TextChanging += Control_TextChanging;
+		// SelectionChanged is only raised asynchronously once loaded, so programmatic changes report themselves
+		Control.SelectionChanged += (sender, e) => CheckSelectionChanged();
 	}
 
 	mut.RichEditTextDocument Document => Control.Document;
@@ -58,11 +61,23 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		return NormalizeText(text);
 	}
 
-	static string NormalizeText(string? text)
+	// RichEdit separates paragraphs with \r
+	static string NormalizeText(string? text) => string.IsNullOrEmpty(text) ? string.Empty : text.Replace("\r\n", "\n").Replace('\r', '\n');
+
+	void CheckSelectionChanged()
 	{
-		if (string.IsNullOrEmpty(text))
-			return string.Empty;
-		return text.Replace("\r\n", "\n").TrimEnd('\r');
+		var selection = Selection;
+		if (_lastSelection != selection)
+		{
+			_lastSelection = selection;
+			Callback.OnSelectionChanged(Widget, EventArgs.Empty);
+		}
+		var caretIndex = CaretIndex;
+		if (_lastCaretIndex != caretIndex)
+		{
+			_lastCaretIndex = caretIndex;
+			Callback.OnCaretIndexChanged(Widget, EventArgs.Empty);
+		}
 	}
 
 	static mut.FormatEffect ToFormatEffect(bool value) => value ? mut.FormatEffect.On : mut.FormatEffect.Off;
@@ -87,14 +102,17 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		_ => TextAlignment.Left
 	};
 
-	void SetSelectionFormat(Action<mut.ITextCharacterFormat> apply)
-	{
-		apply(Document.Selection.CharacterFormat);
-	}
+	void SetSelectionFormat(Action<mut.ITextCharacterFormat> apply) => ApplyFormat(Document.Selection.CharacterFormat, apply);
 
-	void SetRangeFormat(Range<int> range, Action<mut.ITextCharacterFormat> apply)
+	void SetRangeFormat(Range<int> range, Action<mut.ITextCharacterFormat> apply) => ApplyFormat(GetRange(range).CharacterFormat, apply);
+
+	void ApplyFormat(mut.ITextCharacterFormat format, Action<mut.ITextCharacterFormat> apply)
 	{
-		apply(GetRange(range).CharacterFormat);
+		// raise once, as each attribute applied raises TextChanging
+		_suppressTextChanged++;
+		apply(format);
+		_suppressTextChanged--;
+		Callback.OnTextChanged(Widget, EventArgs.Empty);
 	}
 
 	public bool ReadOnly
@@ -108,14 +126,10 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		get => GetDocumentText();
 		set
 		{
-			_suppressSelectionChanged++;
-			_suppressTextChanged++;
 			Document.SetText(mut.TextSetOptions.None, value ?? string.Empty);
-			Document.Selection.SetRange(TextLength, TextLength);
-			_suppressTextChanged--;
-			_suppressSelectionChanged--;
-			_lastSelection = Selection;
-			_lastCaretIndex = CaretIndex;
+			var end = TextLength;
+			Document.Selection.SetRange(end, end);
+			CheckSelectionChanged();
 		}
 	}
 
@@ -128,7 +142,11 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 	public string SelectedText
 	{
 		get => NormalizeText(Document.Selection.Text);
-		set => Document.Selection.Text = value ?? string.Empty;
+		set
+		{
+			Document.Selection.Text = value ?? string.Empty;
+			CheckSelectionChanged();
+		}
 	}
 
 	public Range<int> Selection
@@ -143,13 +161,18 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 			var start = Math.Max(0, value.Start);
 			var end = Math.Max(start, start + value.Length());
 			Document.Selection.SetRange(start, end);
+			CheckSelectionChanged();
 		}
 	}
 
 	public int CaretIndex
 	{
 		get => Document.Selection.StartPosition;
-		set => Document.Selection.SetRange(value, value);
+		set
+		{
+			Document.Selection.SetRange(value, value);
+			CheckSelectionChanged();
+		}
 	}
 
 	public bool AcceptsTab
@@ -318,13 +341,21 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 	{
 		if (string.IsNullOrEmpty(text))
 			return;
-		Document.Selection.SetRange(TextLength, TextLength);
+		var end = TextLength;
+		Document.Selection.SetRange(end, end);
 		Document.Selection.Text = text;
+		end = TextLength;
+		Document.Selection.SetRange(end, end);
+		CheckSelectionChanged();
 		if (scrollToCursor)
 			ScrollToEnd();
 	}
 
-	public void SelectAll() => Document.Selection.Expand(mut.TextRangeUnit.Story);
+	public void SelectAll()
+	{
+		Document.Selection.SetRange(0, TextLength);
+		CheckSelectionChanged();
+	}
 
 	public void ScrollTo(Range<int> range)
 	{
@@ -396,15 +427,14 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 	public void Load(Stream stream, RichTextAreaFormat format)
 	{
 		using var randomAccessStream = stream.AsRandomAccessStream();
-		_suppressSelectionChanged++;
+		// loading can raise TextChanging more than once
 		_suppressTextChanged++;
 		Document.LoadFromStream(format == RichTextAreaFormat.Rtf ? mut.TextSetOptions.FormatRtf : mut.TextSetOptions.None, randomAccessStream);
-		Document.Selection.SetRange(TextLength, TextLength);
 		_suppressTextChanged--;
-		_suppressSelectionChanged--;
-		_lastSelection = Selection;
-		_lastCaretIndex = CaretIndex;
 		Callback.OnTextChanged(Widget, EventArgs.Empty);
+		var end = TextLength;
+		Document.Selection.SetRange(end, end);
+		CheckSelectionChanged();
 	}
 
 	public void Save(Stream stream, RichTextAreaFormat format)
@@ -425,6 +455,7 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 	public void Delete(Range<int> range)
 	{
 		GetRange(range).Text = string.Empty;
+		CheckSelectionChanged();
 	}
 
 	public void Insert(int position, string text)
@@ -432,6 +463,7 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		if (string.IsNullOrEmpty(text))
 			return;
 		Document.GetRange(position, position).Text = text;
+		CheckSelectionChanged();
 	}
 
 	public override void AttachEvent(string id)
@@ -439,13 +471,9 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		switch (id)
 		{
 			case TextControl.TextChangedEvent:
-				Control.TextChanged += Control_TextChanged;
-				break;
 			case TextArea.SelectionChangedEvent:
-				Control.SelectionChanged += Control_SelectionChanged;
-				break;
 			case TextArea.CaretIndexChangedEvent:
-				Control.SelectionChanged += Control_CaretSelectionChanged;
+				// always hooked up
 				break;
 			default:
 				base.AttachEvent(id);
@@ -453,33 +481,14 @@ public class RichTextAreaHandler : WinUIControl<muc.RichEditBox, RichTextArea, R
 		}
 	}
 
-	void Control_TextChanged(object sender, mux.RoutedEventArgs e)
+	void Control_TextChanging(muc.RichEditBox sender, muc.RichEditBoxTextChangingEventArgs e)
 	{
-		if (_suppressTextChanged == 0)
-			Callback.OnTextChanged(Widget, EventArgs.Empty);
-	}
-
-	void Control_SelectionChanged(object sender, mux.RoutedEventArgs e)
-	{
-		if (_suppressSelectionChanged != 0)
+		if (_suppressTextChanged > 0)
 			return;
-
-		var selection = Selection;
-		if (_lastSelection != selection)
-		{
-			_lastSelection = selection;
-			Callback.OnSelectionChanged(Widget, EventArgs.Empty);
-		}
-	}
-
-	void Control_CaretSelectionChanged(object sender, mux.RoutedEventArgs e)
-	{
-		var caretIndex = CaretIndex;
-		if (_lastCaretIndex != caretIndex)
-		{
-			_lastCaretIndex = caretIndex;
-			Callback.OnCaretIndexChanged(Widget, EventArgs.Empty);
-		}
+		// the control reformats its document when loaded, so only formatting by the user counts as a change
+		if (!e.IsContentChanging && Control.FocusState == mux.FocusState.Unfocused)
+			return;
+		Callback.OnTextChanged(Widget, EventArgs.Empty);
 	}
 
 	sealed class SelectionFontHandler(string familyName, float size, FontStyle style, FontDecoration decoration) : Font.IHandler

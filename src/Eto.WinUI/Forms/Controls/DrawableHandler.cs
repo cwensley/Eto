@@ -69,7 +69,8 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 
 	public Graphics CreateGraphics()
 	{
-		throw new NotImplementedException();
+		// Win2D's CanvasControl only hands out a drawing session during its Draw event
+		throw new NotSupportedException("Drawable.CreateGraphics is not supported on WinUI, draw in the Paint event instead");
 	}
 
 	public void Update(Rectangle region)

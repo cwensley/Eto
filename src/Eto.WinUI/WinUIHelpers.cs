@@ -66,8 +66,7 @@ namespace Eto.Forms
 		{
 			if (window == null)
 				return null;
-			throw new NotImplementedException();
-			//return new Form(new NativeFormHandler(window));
+			return NativeFormHandler.Create(window);
 		}
 
 		/// <summary>
@@ -75,6 +74,7 @@ namespace Eto.Forms
 		/// </summary>
 		/// <remarks>
 		/// This is useful when your application is fully native and does not use WinForms or Wpf.
+		/// On WinUI the handle must belong to a WinUI window created by Eto or previously wrapped with <see cref="ToEtoWindow(mux.Window)"/>.
 		/// </remarks>
 		/// <returns>The eto window wrapper around the win32 window with the specified handle.</returns>
 		/// <param name="windowHandle">Handle of the win32 window.</param>
@@ -82,8 +82,7 @@ namespace Eto.Forms
 		{
 			if (windowHandle == IntPtr.Zero)
 				return null;
-			throw new NotImplementedException();
-			//return new Form(new HwndFormHandler(windowHandle));
+			return NativeFormHandler.Create(windowHandle);
 		}
 
 	}

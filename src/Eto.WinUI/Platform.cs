@@ -142,6 +142,7 @@ namespace Eto.WinUI
 			// Forms
 			p.Add<AboutDialog.IHandler>(() => new ThemedAboutDialogHandler());
 			p.Add<Application.IHandler>(() => new ApplicationHandler());
+			p.Add<Themes.IHandler>(() => new ThemesHandler());
 			//p.Add<Clipboard.IHandler>(() => new ClipboardHandler());
 			p.Add<ColorDialog.IHandler>(() => new ThemedColorDialogHandler());
 			//p.Add<Cursor.IHandler>(() => new CursorHandler());
@@ -163,7 +164,7 @@ namespace Eto.WinUI
 			p.Add<Mouse.IHandler>(() => new MouseHandler());
 			p.Add<Screen.IScreensHandler>(() => new ScreensHandler());
 			//p.Add<Keyboard.IHandler>(() => new KeyboardHandler());
-			//p.Add<FixedMaskedTextProvider.IHandler>(() => new FixedMaskedTextProviderHandler());
+			p.Add<FixedMaskedTextProvider.IHandler>(() => new Eto.Shared.Forms.FixedMaskedTextProviderHandler());
 			//p.Add<TrayIndicator.IHandler>(() => new TrayIndicatorHandler());
 			//p.Add<Notification.IHandler>(() => new NotificationHandler());
 			//p.Add<DataObject.IHandler>(() => new DataObjectHandler());

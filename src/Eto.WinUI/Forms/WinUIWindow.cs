@@ -147,13 +147,22 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 
 	mui.Window IWinUIWindow.Control => Control;
 
+	protected virtual bool IsAttached => false;
+
 	protected override void Initialize()
 	{
 		base.Initialize();
 
+		// a native window wrapped by WinUIHelpers.ToEtoWindow keeps its own content
+		if (IsAttached)
+			return;
+
 		Control.ExtendsContentIntoTitleBar = true;
 
-		_rootGrid.Background = mux.Application.Current.Resources["ApplicationPageBackgroundThemeBrush"] as muxm.Brush;
+		// a ThemeResource can only be referenced from XAML, and it lets the background follow the window's theme
+		_rootGrid.Style = (mui.Style)mui.Markup.XamlReader.Load(
+			"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='Grid'>" +
+			"<Setter Property='Background' Value='{ThemeResource ApplicationPageBackgroundThemeBrush}'/></Style>");
 
 		// Define rows: title, menu, top toolbar, content, bottom toolbar
 		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
@@ -173,6 +182,7 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 		_rootGrid.Children.Add(_titleBar);
 
 		Control.Content = _rootGrid;
+		ApplicationHandler.ApplyTheme(this, ApplicationHandler.ElementTheme);
 
 	}
 

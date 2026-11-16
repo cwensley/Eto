@@ -127,7 +127,7 @@ public static class WinUIConversions
 		VerticalAlignment.Bottom => mux.VerticalAlignment.Bottom,
 		VerticalAlignment.Center => mux.VerticalAlignment.Center,
 		VerticalAlignment.Stretch => mux.VerticalAlignment.Stretch,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static VerticalAlignment ToEto(this mux.VerticalAlignment value) => value switch
@@ -136,7 +136,7 @@ public static class WinUIConversions
 		mux.VerticalAlignment.Bottom => VerticalAlignment.Bottom,
 		mux.VerticalAlignment.Center => VerticalAlignment.Center,
 		mux.VerticalAlignment.Stretch => VerticalAlignment.Stretch,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static mux.TextWrapping ToWinUI(this WrapMode value) => value switch
@@ -144,7 +144,7 @@ public static class WinUIConversions
 		WrapMode.Character => mux.TextWrapping.Wrap,
 		WrapMode.None => mux.TextWrapping.NoWrap,
 		WrapMode.Word => mux.TextWrapping.WrapWholeWords,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static WrapMode ToEto(this mux.TextWrapping value) => value switch
@@ -152,7 +152,7 @@ public static class WinUIConversions
 		mux.TextWrapping.Wrap => WrapMode.Character,
 		mux.TextWrapping.NoWrap => WrapMode.None,
 		mux.TextWrapping.WrapWholeWords => WrapMode.Word,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static mux.TextTrimming ToWinUI(this TextTrimming value) => value switch
@@ -160,7 +160,7 @@ public static class WinUIConversions
 		TextTrimming.None => mux.TextTrimming.None,
 		TextTrimming.CharacterEllipsis => mux.TextTrimming.CharacterEllipsis,
 		TextTrimming.WordEllipsis => mux.TextTrimming.WordEllipsis,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static TextTrimming ToEto(this mux.TextTrimming value) => value switch
@@ -169,7 +169,7 @@ public static class WinUIConversions
 		mux.TextTrimming.Clip => TextTrimming.None,
 		mux.TextTrimming.CharacterEllipsis => TextTrimming.CharacterEllipsis,
 		mux.TextTrimming.WordEllipsis => TextTrimming.WordEllipsis,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static mux.TextAlignment ToWinUI(this TextAlignment value) => value switch
@@ -177,8 +177,7 @@ public static class WinUIConversions
 		TextAlignment.Left => mux.TextAlignment.Left,
 		TextAlignment.Center => mux.TextAlignment.Center,
 		TextAlignment.Right => mux.TextAlignment.Right,
-		//TextAlignment.Justify => mux.TextAlignment.Justify,
-		_ => throw new NotImplementedException()
+		_ => throw new ArgumentOutOfRangeException(nameof(value))
 	};
 
 	public static TextAlignment ToEto(this mux.TextAlignment value) => value switch

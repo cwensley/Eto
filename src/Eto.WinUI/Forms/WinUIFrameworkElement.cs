@@ -104,16 +104,17 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		get => ContainerControl.AllowDrop;
 		set => ContainerControl.AllowDrop = value;
 	}
-	public bool IsMouseCaptured { get; }
+	public bool IsMouseCaptured => MouseEventElement.PointerCaptures?.Count > 0;
 
-	public bool CaptureMouse()
-	{
-		throw new NotImplementedException();
-	}
+	// WinUI captures a specific pointer, so remember the one behind the mouse event being handled
+	static Microsoft.UI.Xaml.Input.Pointer? s_currentPointer;
+
+	public bool CaptureMouse() => s_currentPointer != null && MouseEventElement.CapturePointer(s_currentPointer);
 
 	public virtual void DoDragDrop(DataObject data, DragEffects allowedEffects, Image image, PointF cursorOffset)
 	{
-		throw new NotImplementedException();
+		// needs DataObject/DataFormats handlers, which WinUI doesn't have yet
+		throw new NotSupportedException("Drag and drop is not supported on WinUI yet");
 	}
 
 	public virtual void Focus()
@@ -121,9 +122,11 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		ContainerControl.Focus(mux.FocusState.Programmatic);
 	}
 
-	public Window GetNativeParentWindow()
+	public Window? GetNativeParentWindow()
 	{
-		throw new NotImplementedException();
+		// only reached when not in an Eto window's control tree, e.g. hosted in a wrapped native window
+		var root = ContainerControl.XamlRoot;
+		return root == null ? null : NativeFormHandler.Find(w => w.Content?.XamlRoot == root);
 	}
 
 	public virtual SizeF GetPreferredSize(SizeF availableSize)
@@ -194,10 +197,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		return ScreenHandler.PhysicalToLogical(windowPosition.Value) + rootPoint;
 	}
 
-	public void ReleaseMouseCapture()
-	{
-		throw new NotImplementedException();
-	}
+	public void ReleaseMouseCapture() => MouseEventElement.ReleasePointerCaptures();
 
 	public virtual void AddGesture(Gesture item) { }
 	public virtual void ClearGestures() { }
@@ -376,6 +376,9 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 			case Eto.Forms.Control.MouseDoubleClickEvent:
 				MouseEventElement.DoubleTapped += HandleDoubleTapped;
 				break;
+			case Eto.Forms.Control.ThemeChangedEvent:
+				ContainerControl.ActualThemeChanged += (sender, e) => Callback.OnThemeChanged(Widget, EventArgs.Empty);
+				break;
 			case Eto.Forms.Control.GotFocusEvent:
 				ContainerControl.GotFocus += (sender, e) => Callback.OnGotFocus(Widget, EventArgs.Empty);
 				break;
@@ -393,6 +396,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		if (Control == null)
 			return;
 
+		s_currentPointer = e.Pointer;
 		var args = CreateMouseButtonEventArgs(e, isPressed: true);
 		Callback.OnMouseDown(Widget, args);
 		e.Handled = args.Handled;
@@ -413,6 +417,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		if (Control == null)
 			return;
 
+		s_currentPointer = e.Pointer;
 		var args = CreateMouseEventArgs(e);
 		Callback.OnMouseMove(Widget, args);
 		e.Handled = args.Handled;

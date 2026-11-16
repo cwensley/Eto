@@ -12,8 +12,6 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 	public Keys AlternateModifier => Keys.Alt;
 	public string? BadgeLabel { get; set; }
 	public bool IsActive { get; }
-	public Theme CurrentTheme { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
 
 	public ApplicationHandler()
 	{
@@ -137,7 +135,88 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 		//WpfFrameworkElementHelper.ShouldCaptureMouse = false;
 	}
 
-	public Theme Theme { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+	Theme? _theme;
+	Windows.UI.ViewManagement.UISettings? _uiSettings;
+	ThemeStyle? _lastSystemThemeStyle;
+
+	public Theme Theme
+	{
+		get => _theme ??= Themes.System;
+		set
+		{
+			_theme = value ?? Themes.System;
+			ApplyTheme();
+			Callback.OnThemeChanged(Widget, EventArgs.Empty);
+		}
+	}
+
+	/// <summary>
+	/// Gets the theme to request on window content so it follows <see cref="Application.Theme"/>.
+	/// </summary>
+	internal static mux.ElementTheme ElementTheme => ThemeHandler.GetElementTheme((Application.Instance?.Handler as ApplicationHandler)?._theme);
+
+	/// <summary>
+	/// Gets whether the application currently renders light or dark.
+	/// </summary>
+	internal static ThemeStyle CurrentThemeStyle => ElementTheme switch
+	{
+		mux.ElementTheme.Light => ThemeStyle.Light,
+		mux.ElementTheme.Dark => ThemeStyle.Dark,
+		_ => ThemeHandler.SystemThemeStyle
+	};
+
+	void ApplyTheme()
+	{
+		var elementTheme = ElementTheme;
+		foreach (var window in Widget.Windows)
+		{
+			if (window.Handler is IWinUIWindow handler)
+				ApplyTheme(handler, elementTheme);
+		}
+	}
+
+	internal static void ApplyTheme(IWinUIWindow window, mux.ElementTheme elementTheme)
+	{
+		if (window.Control.Content is mux.FrameworkElement content)
+			content.RequestedTheme = elementTheme;
+		// caption buttons are drawn by the system so don't follow the content's theme on their own
+		window.Control.AppWindow.TitleBar.PreferredTheme = elementTheme switch
+		{
+			mux.ElementTheme.Light => mu.Windowing.TitleBarTheme.Light,
+			mux.ElementTheme.Dark => mu.Windowing.TitleBarTheme.Dark,
+			_ => mu.Windowing.TitleBarTheme.UseDefaultAppMode
+		};
+	}
+
+	public override void AttachEvent(string id)
+	{
+		switch (id)
+		{
+			case Application.ThemeChangedEvent:
+				// also raised by the Theme setter; this adds changes to the Windows light/dark setting
+				_lastSystemThemeStyle = ThemeHandler.SystemThemeStyle;
+				_uiSettings = new Windows.UI.ViewManagement.UISettings();
+				_uiSettings.ColorValuesChanged += UISettings_ColorValuesChanged;
+				break;
+			default:
+				base.AttachEvent(id);
+				break;
+		}
+	}
+
+	void UISettings_ColorValuesChanged(Windows.UI.ViewManagement.UISettings sender, object args)
+	{
+		// raised on a background thread, and for accent color changes too
+		_dispatcher?.TryEnqueue(() =>
+		{
+			var style = ThemeHandler.SystemThemeStyle;
+			if (style == _lastSystemThemeStyle)
+				return;
+			_lastSystemThemeStyle = style;
+			if (ElementTheme == mux.ElementTheme.Default)
+				Callback.OnThemeChanged(Widget, EventArgs.Empty);
+		});
+	}
 }
 
 /// <summary>

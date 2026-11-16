@@ -25,8 +25,35 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 	}
 	public string Text
 	{
-		get => Control.Text;
-		set => Control.Text = value;
+		get => NormalizeText(Control.Text);
+		set
+		{
+			Control.Text = value ?? string.Empty;
+			Control.Select(Control.Text.Length, 0);
+			CheckSelectionChanged();
+		}
+	}
+
+	// TextBox separates lines with \r
+	static string NormalizeText(string? text) => string.IsNullOrEmpty(text) ? string.Empty : text.Replace("\r\n", "\n").Replace('\r', '\n');
+
+	int _lastCaretIndex;
+	Range<int> _lastSelection;
+
+	void CheckSelectionChanged()
+	{
+		var selection = Selection;
+		if (_lastSelection != selection)
+		{
+			_lastSelection = selection;
+			Callback.OnSelectionChanged(Widget, EventArgs.Empty);
+		}
+		var caretIndex = CaretIndex;
+		if (_lastCaretIndex != caretIndex)
+		{
+			_lastCaretIndex = caretIndex;
+			Callback.OnCaretIndexChanged(Widget, EventArgs.Empty);
+		}
 	}
 	public bool Wrap
 	{
@@ -35,8 +62,12 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 	}
 	public string SelectedText
 	{
-		get => Control.SelectedText;
-		set => Control.SelectedText = value;
+		get => NormalizeText(Control.SelectedText);
+		set
+		{
+			Control.SelectedText = value ?? string.Empty;
+			CheckSelectionChanged();
+		}
 	}
 
 	public Range<int> Selection
@@ -44,8 +75,8 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 		get => Eto.Forms.Range.FromLength(Control.SelectionStart, Control.SelectionLength);
 		set
 		{
-			Control.SelectionStart = value.Start;
-			Control.SelectionLength = value.Length();
+			Control.Select(value.Start, value.Length());
+			CheckSelectionChanged();
 		}
 	}
 	public int CaretIndex
@@ -53,8 +84,8 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 		get => Control.SelectionStart;
 		set
 		{
-			Control.SelectionStart = value;
-			Control.SelectionLength = 0;
+			Control.Select(value, 0);
+			CheckSelectionChanged();
 		}
 	}
 	public bool AcceptsTab { get; set; }
@@ -86,14 +117,20 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 		base.Initialize();
 		Control.AcceptsReturn = true;
 		UserPreferredSize = DefaultSize;
+		// TextChanging is raised synchronously, including for programmatic changes, unlike TextChanged
+		Control.TextChanging += (sender, e) => Callback.OnTextChanged(Widget, EventArgs.Empty);
+		// SelectionChanged is only raised asynchronously once loaded, so programmatic changes report themselves
+		Control.SelectionChanged += (sender, e) => CheckSelectionChanged();
 	}
 
 	public override void AttachEvent(string id)
 	{
 		switch (id)
 		{
-			case TextBox.TextChangedEvent:
-				Control.TextChanged += Control_TextChanged;
+			case TextControl.TextChangedEvent:
+			case TextArea.SelectionChangedEvent:
+			case TextArea.CaretIndexChangedEvent:
+				// always hooked up
 				break;
 			default:
 				base.AttachEvent(id);
@@ -101,28 +138,52 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 		}
 	}
 
-	private void Control_TextChanged(object sender, muc.TextChangedEventArgs e)
-	{
-		Callback.OnTextChanged(Widget, EventArgs.Empty);
-	}
-
 	public void Append(string text, bool scrollToCursor)
 	{
 		Control.Text += text;
+		Control.Select(Control.Text.Length, 0);
+		CheckSelectionChanged();
 		if (scrollToCursor)
 		{
 			ScrollToEnd();
 		}
 	}
 
-	public void SelectAll() => Control.SelectAll();
+	public void SelectAll()
+	{
+		Control.SelectAll();
+		CheckSelectionChanged();
+	}
 
 	public void ScrollTo(Range<int> range)
 	{
-		throw new NotImplementedException();
+		var scrollViewer = ScrollViewer;
+		var length = Control.Text.Length;
+		if (scrollViewer == null || length == 0)
+			return;
+
+		// TextBox has no API to scroll to a position, so bring the character's bounds into the viewport
+		var index = Math.Max(0, Math.Min(range.Start, length - 1));
+		var rect = Control.GetRectFromCharacterIndex(index, range.Start >= length);
+		var location = Control.TransformToVisual(scrollViewer).TransformPoint(new wf.Point(rect.X, rect.Y));
+
+		double? horizontalOffset = null;
+		if (location.X < 0)
+			horizontalOffset = scrollViewer.HorizontalOffset + location.X;
+		else if (location.X + rect.Width > scrollViewer.ViewportWidth)
+			horizontalOffset = scrollViewer.HorizontalOffset + location.X + rect.Width - scrollViewer.ViewportWidth;
+
+		double? verticalOffset = null;
+		if (location.Y < 0)
+			verticalOffset = scrollViewer.VerticalOffset + location.Y;
+		else if (location.Y + rect.Height > scrollViewer.ViewportHeight)
+			verticalOffset = scrollViewer.VerticalOffset + location.Y + rect.Height - scrollViewer.ViewportHeight;
+
+		if (horizontalOffset != null || verticalOffset != null)
+			scrollViewer.ChangeView(horizontalOffset, verticalOffset, null, true);
 	}
 
-	muc.ScrollViewer ScrollViewer => Control.FindDescendant<muc.ScrollViewer>();
+	muc.ScrollViewer? ScrollViewer => Control.FindDescendant<muc.ScrollViewer>();
 
 	public void ScrollToStart()
 	{
