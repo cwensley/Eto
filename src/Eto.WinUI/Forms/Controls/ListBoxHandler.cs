@@ -20,7 +20,7 @@ public class ListBoxHandler : WinUIControl<muc.ListView, ListBox, ListBox.ICallb
 		{
 			_store = value;
 			var source = _store;
-			if (_store is not INotifyCollectionChanged)
+			if (_store != null && _store is not INotifyCollectionChanged)
 				source = new ObservableCollection<object>(_store);
 			Control.ItemsSource = source;
 		}
