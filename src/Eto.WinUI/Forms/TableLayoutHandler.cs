@@ -425,14 +425,15 @@ public class TableLayoutHandler : WinUILayout<EtoGrid, TableLayout, TableLayout.
 
 	public void Remove(mux.FrameworkElement child)
 	{
-		// ensure this is actually a child of this table
-		if (child.Parent != Control)
+		// ensure this is actually a child of this table; Parent is null until the table is in the live tree
+		var index = Control.Children.IndexOf(child);
+		if (index < 0)
 			return;
 
 		// row and column could be for a different table
 		var x = muc.Grid.GetColumn(child);
 		var y = muc.Grid.GetRow(child);
-		Control.Children.Remove(child);
+		Control.Children.RemoveAt(index);
 		if (controls != null
 			&& x >= 0 && x < controls.GetLength(0)
 			&& y >= 0 && y < controls.GetLength(1)
