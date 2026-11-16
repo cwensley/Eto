@@ -51,9 +51,13 @@ public class ButtonHandler : WinUIControl<muc.Button, Button, Button.ICallback>,
 				{
 					HorizontalAlignment = mux.HorizontalAlignment.Center,
 					VerticalAlignment = mux.VerticalAlignment.Center,
-					Stretch = muxm.Stretch.None
+					Stretch = muxm.Stretch.Uniform
 				};
-				_imagePart.Source = ToImageSource(value);
+				// shown at the image's logical size, as an icon's frames can have more pixels than that
+				var size = value.Size;
+				_imagePart.Width = size.Width;
+				_imagePart.Height = size.Height;
+				_imagePart.Source = (value.Handler as Eto.WinUI.Drawing.IWinUIImage)?.GetImageClosestToSize(Screen.PrimaryScreen.LogicalPixelSize, size);
 			}
 
 			UpdateContent();
@@ -215,13 +219,6 @@ public class ButtonHandler : WinUIControl<muc.Button, Button, Button.ICallback>,
 		muc.Grid.SetRow(_imagePart, imageRow);
 		_textBlock.Margin = textMargin;
 	}
-
-	static muxm.ImageSource ToImageSource(Image image) => image switch
-	{
-		Bitmap bitmap => bitmap.ToBitmapSource(),
-		Icon icon => icon.GetFrame(1).Bitmap.ToBitmapSource(),
-		_ => throw new NotSupportedException($"Image type '{image.GetType().FullName}' is not supported by Eto.WinUI buttons.")
-	};
 
 	public override void AttachEvent(string id)
 	{
