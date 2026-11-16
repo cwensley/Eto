@@ -137,6 +137,78 @@ public abstract class GridHandler<TWidget, TCallback> : WinUIFrameworkElement<ct
 		Control.AddHandler(mux.UIElement.PointerReleasedEvent, new PointerEventHandler(Control_PointerReleased), true);
 	}
 
+	// The DataGrid ignores resets of its items until it has been measured, and its first measure doesn't
+	// re-count the rows, so it would keep the old number of rows. Track it so we can work around that.
+	bool _isMeasured;
+	object? _pendingScrollItem;
+	ctk.DataGridColumn? _pendingScrollColumn;
+
+	public override sw.Size MeasureOverride(sw.Size constraint, Func<sw.Size, sw.Size> measure)
+	{
+		var size = base.MeasureOverride(constraint, measure);
+		if (!_isMeasured)
+		{
+			_isMeasured = true;
+			if (_pendingScrollItem != null)
+			{
+				// scroll once the rows have been laid out
+				Control.DispatcherQueue.TryEnqueue(() =>
+				{
+					var item = _pendingScrollItem;
+					var column = _pendingScrollColumn;
+					_pendingScrollItem = null;
+					_pendingScrollColumn = null;
+					if (item != null && GetRowOfItem(item) >= 0)
+						Control.ScrollIntoView(item, column);
+				});
+			}
+		}
+		return size;
+	}
+
+	protected void SetItemsSource(IEnumerable? source)
+	{
+		_isMeasured = false;
+		_pendingScrollItem = null;
+		Control.ItemsSource = source;
+	}
+
+	/// <summary>
+	/// Call after the items were reset, to make the grid pick up the new rows if it hasn't been measured yet.
+	/// </summary>
+	protected void OnItemsReset(INotifyCollectionChanged source, NotifyCollectionChangedEventHandler handler)
+	{
+		if (_isMeasured)
+			return;
+		var items = Control.ItemsSource;
+		BeginSelectionUpdate();
+		try
+		{
+			// keep our handler after the grid's, so it sees the rows once the grid has processed a change
+			source.CollectionChanged -= handler;
+			Control.ItemsSource = null;
+			Control.ItemsSource = items;
+			source.CollectionChanged += handler;
+		}
+		finally
+		{
+			_selectionUpdating--;
+		}
+	}
+
+	protected void ScrollIntoView(object? item, ctk.DataGridColumn? column)
+	{
+		if (item == null)
+			return;
+		if (_isMeasured)
+			Control.ScrollIntoView(item, column);
+		else
+		{
+			_pendingScrollItem = item;
+			_pendingScrollColumn = column;
+		}
+	}
+
 	void Control_Loaded(object sender, mux.RoutedEventArgs e)
 	{
 		// expanded columns don't get auto sized, so we flip to star width after they are auto sized.
@@ -659,7 +731,7 @@ public abstract class GridHandler<TWidget, TCallback> : WinUIFrameworkElement<ct
 			UnselectAll();
 			SelectRow(row);
 		}
-		Control.ScrollIntoView(item, dataGridColumn);
+		ScrollIntoView(item, dataGridColumn);
 		Control.CurrentColumn = dataGridColumn;
 		Control.Focus(mux.FocusState.Programmatic);
 		Control.BeginEdit();
@@ -791,7 +863,7 @@ public abstract class GridHandler<TWidget, TCallback> : WinUIFrameworkElement<ct
 	{
 		if (row < 0 || row >= RowCount)
 			return;
-		Control.ScrollIntoView(GetItemAtRow(row), null);
+		ScrollIntoView(GetItemAtRow(row), null);
 	}
 
 	public GridLines GridLines

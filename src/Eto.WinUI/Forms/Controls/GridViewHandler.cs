@@ -30,7 +30,7 @@ public class GridViewHandler : GridHandler<GridView, GridView.ICallback>, GridVi
 			if (_store == null)
 			{
 				_list = null;
-				Control.ItemsSource = null;
+				SetItemsSource(null);
 				CheckSelectionChanged();
 				return;
 			}
@@ -39,7 +39,7 @@ public class GridViewHandler : GridHandler<GridView, GridView.ICallback>, GridVi
 				_list = new EtoGridCollection(list);
 			else
 				_list = new EtoGridCollection(new ObservableCollection<object>(_store));
-			Control.ItemsSource = _list;
+			SetItemsSource(_list);
 			// subscribe after the grid so we see the selection after it has processed the change
 			if (_list is INotifyCollectionChanged newList)
 				newList.CollectionChanged += List_CollectionChanged;
@@ -48,7 +48,12 @@ public class GridViewHandler : GridHandler<GridView, GridView.ICallback>, GridVi
 		}
 	}
 
-	void List_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => RestoreSelectionAfterChange();
+	void List_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+	{
+		if (e.Action == NotifyCollectionChangedAction.Reset && sender is INotifyCollectionChanged source)
+			OnItemsReset(source, List_CollectionChanged);
+		RestoreSelectionAfterChange();
+	}
 
 	public IEnumerable<object> SelectedItems => Control.SelectedItems.Cast<object>().ToList();
 

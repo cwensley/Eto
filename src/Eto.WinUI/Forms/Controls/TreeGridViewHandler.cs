@@ -146,12 +146,12 @@ public class TreeGridViewHandler : GridHandler<TreeGridView, TreeGridView.ICallb
 		{
 			_collection?.Unregister();
 			_collection = null;
-			Control.ItemsSource = null;
+			SetItemsSource(null);
 			_controller.InitializeItems(value);
 			if (value != null)
 			{
 				_collection = new EtoGridCollection(_controller);
-				Control.ItemsSource = _collection;
+				SetItemsSource(_collection);
 				// subscribe after the grid so we see the rows after it has processed the change
 				_collection.CollectionChanged += Collection_CollectionChanged;
 			}
@@ -173,6 +173,8 @@ public class TreeGridViewHandler : GridHandler<TreeGridView, TreeGridView.ICallb
 
 	void Collection_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 	{
+		if (e.Action == NotifyCollectionChangedAction.Reset && _collection != null)
+			OnItemsReset(_collection, Collection_CollectionChanged);
 		RestoreSelectionAfterChange();
 		DispatcherQueueUpdateToggles();
 	}
@@ -192,7 +194,7 @@ public class TreeGridViewHandler : GridHandler<TreeGridView, TreeGridView.ICallb
 						SelectedRows = new[] { row };
 					else
 						Control.SelectedItem = value;
-					Control.ScrollIntoView(value, null);
+					ScrollIntoView(value, null);
 				}
 			}
 			else

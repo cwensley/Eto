@@ -20,6 +20,41 @@ namespace Eto.Test.UnitTests.Forms.Controls
 			});
 		}
 
+		[TestCase(true)]
+		[TestCase(false)]
+		public void SelectingNestedItemBeforeShownShouldWork(bool allowEmptySelection)
+		{
+			TreeGridView tree = null;
+			TreeGridItem nested = null;
+			Shown(form =>
+			{
+				tree = new TreeGridView { ShowHeader = false, AllowEmptySelection = allowEmptySelection };
+				tree.Columns.Add(new GridColumn { DataCell = new TextBoxCell(0) });
+				var store = new TreeGridItemCollection();
+				for (int i = 0; i < 5; i++)
+				{
+					var parent = new TreeGridItem($"Parent {i}");
+					for (int j = 0; j < 5; j++)
+					{
+						var child = new TreeGridItem($"Child {i}.{j}");
+						for (int k = 0; k < 5; k++)
+							child.Children.Add(new TreeGridItem($"Grandchild {i}.{j}.{k}"));
+						parent.Children.Add(child);
+					}
+					store.Add(parent);
+				}
+				tree.DataStore = store;
+
+				nested = (TreeGridItem)((TreeGridItem)((TreeGridItem)store[3]).Children[2]).Children[4];
+				tree.SelectedItem = nested;
+				Assert.That(tree.SelectedItem, Is.SameAs(nested), "#1 nested item should be selected before shown");
+				form.Content = tree;
+			}, () =>
+			{
+				Assert.That(tree.SelectedItem, Is.SameAs(nested), "#2 nested item should still be selected when shown");
+			});
+		}
+
 		/// <summary>
 		/// Issue #814
 		/// </summary>
