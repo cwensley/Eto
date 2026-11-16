@@ -103,7 +103,7 @@ namespace Eto.WinUI
 			p.Add<TextBox.IHandler>(() => new TextBoxHandler());
 			p.Add<TreeGridView.IHandler>(() => new TreeGridViewHandler());
 #pragma warning disable CS0618 // Type or member is obsolete
-			//p.Add<TreeView.IHandler>(() => new TreeViewHandler());
+			p.Add<TreeView.IHandler>(() => new ThemedTreeViewHandler());
 #pragma warning restore CS0618 // Type or member is obsolete
 			p.Add<WebView.IHandler>(() => new WebViewHandler());
 			p.Add<RichTextArea.IHandler>(() => new RichTextAreaHandler());
@@ -179,34 +179,5 @@ namespace Eto.WinUI
 			p.Add<EtoEnvironment.IHandler>(() => new EtoEnvironmentHandler());
 		}
 
-		//public void UseWpfWebView()
-		//{
-		//	Add<WebView.IHandler>(() => new WpfWebViewHandler());
-		//}
-
-		//public void UseSwfWebView()
-		//{
-		//	Add<WebView.IHandler>(() => new SwfWebViewHandler());
-		//}
-
-		//public void UseWebView2()
-		//{
-		//	Add<WebView.IHandler>(Create_WebView2);
-		//}
-
-		//private WebView.IHandler Create_WebView2()
-		//{
-		//	try
-		//	{
-		//		return WebView2Loader.Create();
-		//	}
-		//	catch
-		//	{
-		//		Debug.WriteLine("Warning: Could not create WebView2 handler. Add Microsoft.Web.WebView2 nuget package to your project to take advantage of the latest web control.");
-		//		// switch to SWF version for subsequent controls
-		//		UseSwfWebView();
-		//		return new SwfWebViewHandler();
-		//	}
-		//}
 	}
 }
