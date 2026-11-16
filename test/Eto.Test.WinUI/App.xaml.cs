@@ -27,7 +27,9 @@ namespace Eto.Test.WinUI
 		public App()
 		{
 			this.InitializeComponent();
-			app = new TestApplication(new Eto.WinUI.Platform());
+			var platform = new Eto.WinUI.Platform();
+			platform.Add<Eto.Test.UnitTests.ITestInput>(() => new TestInput());
+			app = new TestApplication(platform);
 		}
 
 		/// <summary>

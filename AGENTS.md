@@ -34,6 +34,12 @@ dotnet test --project test/Eto.Test.UnitTests/Eto.Test.UnitTests.csproj -f net10
 - **Always pass `-f`** — the project multi-targets `net48;net10.0;net10.0-windows` (plus
   `net10.0-macos` on a Mac). On Linux use `-f net10.0`; the Windows-only TFMs won't build there.
 - Test runner is Microsoft.Testing.Platform (set in `global.json`), NUnit 4.
+- **WinUI: `-f net10.0-windows10.0.22621`** (always WinUI, no `--platform` needed); builds an unpackaged
+  WinUI app for this machine's RID. Fine for a filtered run with `dotnet test`, but a full run can't finish
+  in one process: every WinUI window with an extended title bar leaks ~35 GDI objects, hitting the 10,000
+  quota. Add `--batch-size=200` (not through `dotnet test`): it starts a new process every 200 tests or
+  after a crash, skips a test that crashes twice, and prints a combined summary.
+  `dotnet run --project test/Eto.Test.UnitTests -f net10.0-windows10.0.22621 -- --batch-size=200 --filter "TestCategory!=ManualTest"`
 - **The modern Mac-specific tests are in `test/Eto.Test.Mac/Eto.Test.macOS.csproj` and require
   the matching .NET macOS workload.** The presence of `Microsoft.macOS.Ref` packs alone is not
   sufficient. If the workload rejects a newer Xcode patch version, set
@@ -270,6 +276,7 @@ Note `MenuBarSystemItems.All = Common | Quit` predates this and has the older sh
 The test + platform projects pick a backend by TargetFramework:
 - `net10.0` → Gtk (Linux) and Mac
 - `net10.0-windows` / `net48` → Wpf (Windows only)
+- `net10.0-windows10.0.22621` → WinUI (unit test runner only)
 
 Core `Eto` project targets `netstandard2.0;net6.0;net8.0;net10.0`.
 Platform backends live in `src/Eto.<Platform>/` (Gtk, Mac, Wpf, WinForms, WinUI, iOS,

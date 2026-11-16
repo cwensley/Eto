@@ -5,7 +5,7 @@
          WinForms, Eto.Test.Wpf and Eto.Test.WinForms projects are excluded from *|Mac and *|Linux
          in Eto.slnx), so only target them there. -->
     <TargetFrameworks>net10.0</TargetFrameworks>
-    <TargetFrameworks Condition="$(OSPlatform) == 'Windows'">net48;net10.0;net10.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="$(OSPlatform) == 'Windows'">net48;net10.0;net10.0-windows;net10.0-windows10.0.22621</TargetFrameworks>
     <TargetFrameworks Condition="$(OSPlatform) == 'Mac'">net10.0;net10.0-macos</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -26,6 +26,20 @@
     <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
   </PropertyGroup>
   
+  <!-- net10.0-windows10.0.22621 runs the tests against WinUI (Eto.WinUI) as an unpackaged WinUI app, so the
+       Windows App SDK bootstraps its runtime and the referenced XAML resources get merged into our .pri. -->
+  <PropertyGroup Condition="$(TargetFramework) == 'net10.0-windows10.0.22621'">
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <ApplicationManifest>..\Eto.Test.WinUI\app.manifest</ApplicationManifest>
+    <!-- Win2D's native dll is only copied next to the exe for a specific runtime; set here rather than
+         passing -p:RuntimeIdentifier/Platform, which would flow to Eto.Test and break its xeto generation -->
+    <RuntimeIdentifier>$(NETCoreSdkPortableRuntimeIdentifier)</RuntimeIdentifier>
+    <DefineConstants>$(DefineConstants);WINUI</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.6.1" />
     <!-- the net*-macos build runs NUnit in-process instead of through the adapter's bridge (see
@@ -48,6 +62,10 @@
     <ProjectReference Include="..\Eto.Test.Wpf\Eto.Test.Wpf.csproj" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Eto.WinForms\Eto.WinForms.csproj" PrivateAssets="all" />
     <ProjectReference Include="..\Eto.Test.WinForms\Eto.Test.WinForms.csproj" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework) == 'net10.0-windows10.0.22621'">
+    <ProjectReference Include="..\..\src\Eto.WinUI\Eto.WinUI.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Eto.Test.WinUI\Eto.Test.WinUI.csproj" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'net10.0'">
     <ProjectReference Include="..\..\src\Eto.Gtk\Eto.Gtk.csproj" PrivateAssets="all" />

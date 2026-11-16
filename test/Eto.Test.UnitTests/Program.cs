@@ -20,6 +20,16 @@ namespace Eto.Test.UnitTests;
 
 internal static class Program
 {
+	// Used by batched runs (see BatchRunner): where to record each test as it starts and finishes, and how many
+	// tests to run before exiting with StopAfterExitCode.
+	internal const string ProgressOption = "--eto-progress=";
+	internal const string StopAfterOption = "--eto-stop-after=";
+	internal const int StopAfterExitCode = 99;
+	// a --filter too long for a command line, read from a file
+	internal const string FilterFileOption = "--eto-filter-file=";
+	static string? progressFile;
+	static int stopAfter;
+
 	static IEnumerable<Assembly> GetTestAssemblies()
 	{
 		// When more than one assembly is listed, the VSTest bridge requires the test application's
@@ -27,7 +37,9 @@ internal static class Program
 		yield return typeof(Program).Assembly;
 
 		yield return typeof(Eto.Test.MainForm).Assembly;
-#if WINDOWS || NETFRAMEWORK
+#if WINUI
+		// the WinUI build only has the WinUI backend, which has no platform-specific fixtures yet
+#elif WINDOWS || NETFRAMEWORK
 		if (Platform.Instance.IsWpf)
 		{
 			// WPF-specific fixtures from test/Eto.Test.Wpf/UnitTests
@@ -66,7 +78,10 @@ internal static class Program
 	/// </summary>
 	static void RegisterTestInput(Platform platform)
 	{
-#if WINDOWS || NETFRAMEWORK
+#if WINUI
+		if (platform is Eto.WinUI.Platform)
+			platform.Add<ITestInput>(() => new Eto.Test.WinUI.TestInput());
+#elif WINDOWS || NETFRAMEWORK
 		if (platform.IsWpf)
 			platform.Add<ITestInput>(() => new Eto.Test.Wpf.TestInput());
 		else if (platform.IsWinForms)
@@ -87,12 +102,41 @@ internal static class Program
 	{
 		AvoidThemeSatelliteResolverCrash();
 
+#if NET
+		var batchSize = args.FirstOrDefault(a => a.StartsWith(BatchRunner.BatchSizeOption, StringComparison.Ordinal));
+		if (batchSize != null)
+		{
+			var batchTimeout = args.FirstOrDefault(a => a.StartsWith(BatchRunner.BatchTimeoutOption, StringComparison.Ordinal));
+			return BatchRunner.Run(
+				int.Parse(batchSize.Substring(BatchRunner.BatchSizeOption.Length)),
+				TimeSpan.FromMinutes(batchTimeout != null ? double.Parse(batchTimeout.Substring(BatchRunner.BatchTimeoutOption.Length)) : 30),
+				args.Where(a => a != batchSize && a != batchTimeout).ToList());
+		}
+#endif
+
 		List<string> testArgs = new();
 		// check any of the args for platform override
 		Platform? platform = null;
 		foreach (var arg in args)
 		{
-			if (arg.StartsWith("--platform=", StringComparison.OrdinalIgnoreCase))
+			if (arg.StartsWith(ProgressOption, StringComparison.Ordinal))
+			{
+				progressFile = arg.Substring(ProgressOption.Length);
+			}
+			else if (arg.StartsWith(StopAfterOption, StringComparison.Ordinal))
+			{
+				stopAfter = int.Parse(arg.Substring(StopAfterOption.Length));
+			}
+			else if (arg.StartsWith(FilterFileOption, StringComparison.Ordinal))
+			{
+				var filter = File.ReadAllText(arg.Substring(FilterFileOption.Length));
+				if (!string.IsNullOrEmpty(filter))
+				{
+					testArgs.Add("--filter");
+					testArgs.Add(filter);
+				}
+			}
+			else if (arg.StartsWith("--platform=", StringComparison.OrdinalIgnoreCase))
 			{
 				Console.WriteLine($"Overriding platform with '{arg}'");
 				var platformName = arg.Substring("--platform=".Length);
@@ -100,7 +144,11 @@ internal static class Program
 				{
 					switch (platformName.ToLowerInvariant())
 					{
-#if WINDOWS || NETFRAMEWORK
+#if WINUI
+						case "winui":
+							platform = new Eto.WinUI.Platform();
+							break;
+#elif WINDOWS || NETFRAMEWORK
 						case "wpf":
 							platform = new Eto.Wpf.Platform();
 							break;
@@ -131,7 +179,12 @@ internal static class Program
 		}
 		
 		if (platform == null)
+#if WINUI
+			// WinUI is never auto-detected, and is the only backend this build references
+			platform = new Eto.WinUI.Platform();
+#else
 			platform = Platform.Detect;
+#endif
 
 		RegisterTestInput(platform);
 
@@ -153,6 +206,18 @@ internal static class Program
 
 		app.Initialized += (sender, e) =>
 		{
+#if WINUI
+			// An exception escaping a WinUI event handler fails the whole process, so report it and carry on
+			// with the run instead; the test it came from will usually fail or time out on its own.
+			if (app.ControlObject is Microsoft.UI.Xaml.Application winuiApplication)
+			{
+				winuiApplication.UnhandledException += (s, args) =>
+				{
+					Console.Error.WriteLine($"Unhandled exception on the UI thread: {args.Exception}");
+					args.Handled = true;
+				};
+			}
+#endif
 			var context = SynchronizationContext.Current;
 			_ = Task.Run(async () =>
 			{
@@ -209,6 +274,17 @@ internal static class Program
 				(capabilities, serviceProvider) => new NUnitTestFramework(GetTestAssemblies, serviceProvider));
 #else
 			builder.AddNUnit(GetTestAssemblies);
+#endif
+#if WINUI
+			var windowCleanup = new WinUIWindowCleanup(app.Platform);
+			builder.TestHost.AddDataConsumer(serviceProvider => windowCleanup);
+#endif
+#if NET
+			if (progressFile != null)
+			{
+				var progressWriter = new TestProgressWriter(progressFile, stopAfter);
+				builder.TestHost.AddDataConsumer(serviceProvider => progressWriter);
+			}
 #endif
 			// registered explicitly (adds the trx report options) as we don't use the generated entry point
 			builder.AddTrxReportProvider();
