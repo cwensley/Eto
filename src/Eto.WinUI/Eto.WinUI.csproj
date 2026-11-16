@@ -54,6 +54,12 @@
     <Compile Include="..\Shared\WebViewHtmlServer.cs">
       <Link>Forms\Controls\WebViewHtmlServer.cs</Link>
     </Compile>
+    <Compile Include="..\Shared\WeakEventListener.cs">
+      <Link>WeakEventListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Eto.WinForms\CustomControls\TreeController.cs">
+      <Link>CustomControls\TreeController.cs</Link>
+    </Compile>
   </ItemGroup>
 
 </Project>

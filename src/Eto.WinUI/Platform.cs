@@ -4,6 +4,7 @@ using Eto.IO;
 using Eto.Forms.ThemedControls;
 using Eto.WinUI.Forms;
 using Eto.WinUI.Forms.Controls;
+using Eto.WinUI.Forms.Cells;
 using Eto.WinUI.Forms.Menu;
 using Eto.WinUI.Forms.ToolBars;
 using Eto.WinUI.Forms.Printing;
@@ -58,14 +59,14 @@ namespace Eto.WinUI
 			p.Add<FormattedText.IHandler>(() => new FormattedTextHandler());
 
 			// Forms.Cells
-			//p.Add<CheckBoxCell.IHandler>(() => new CheckBoxCellHandler());
-			//p.Add<ComboBoxCell.IHandler>(() => new ComboBoxCellHandler());
-			//p.Add<ImageTextCell.IHandler>(() => new ImageTextCellHandler());
-			//p.Add<ImageViewCell.IHandler>(() => new ImageViewCellHandler());
-			//p.Add<TextBoxCell.IHandler>(() => new TextBoxCellHandler());
-			//p.Add<DrawableCell.IHandler>(() => new DrawableCellHandler());
-			//p.Add<ProgressCell.IHandler>(() => new ProgressCellHandler());
-			//p.Add<CustomCell.IHandler>(() => new CustomCellHandler());
+			p.Add<CheckBoxCell.IHandler>(() => new CheckBoxCellHandler());
+			p.Add<ComboBoxCell.IHandler>(() => new ComboBoxCellHandler());
+			p.Add<ImageTextCell.IHandler>(() => new ImageTextCellHandler());
+			p.Add<ImageViewCell.IHandler>(() => new ImageViewCellHandler());
+			p.Add<TextBoxCell.IHandler>(() => new TextBoxCellHandler());
+			p.Add<DrawableCell.IHandler>(() => new DrawableCellHandler());
+			p.Add<ProgressCell.IHandler>(() => new ProgressCellHandler());
+			p.Add<CustomCell.IHandler>(() => new CustomCellHandler());
 
 			// Forms.Controls
 			p.Add<Button.IHandler>(() => new ButtonHandler());
@@ -78,8 +79,8 @@ namespace Eto.WinUI
 			p.Add<Drawable.IHandler>(() => new DrawableHandler());
 			//p.Add<Expander.IHandler>(() => new ExpanderHandler());
 			p.Add<FontPicker.IHandler>(() => new ThemedFontPickerHandler());
-			//p.Add<GridColumn.IHandler>(() => new GridColumnHandler());
-			//p.Add<GridView.IHandler>(() => new GridViewHandler());
+			p.Add<GridColumn.IHandler>(() => new GridColumnHandler());
+			p.Add<GridView.IHandler>(() => new GridViewHandler());
 			//p.Add<GroupBox.IHandler>(() => new GroupBoxHandler());
 			//p.Add<ImageView.IHandler>(() => new ImageViewHandler());
 			p.Add<Label.IHandler>(() => new LabelHandler());
@@ -99,7 +100,7 @@ namespace Eto.WinUI
 			//p.Add<TabPage.IHandler>(() => new TabPageHandler());
 			p.Add<TextArea.IHandler>(() => new TextAreaHandler());
 			p.Add<TextBox.IHandler>(() => new TextBoxHandler());
-			//p.Add<TreeGridView.IHandler>(() => new TreeGridViewHandler());
+			p.Add<TreeGridView.IHandler>(() => new TreeGridViewHandler());
 #pragma warning disable CS0618 // Type or member is obsolete
 			//p.Add<TreeView.IHandler>(() => new TreeViewHandler());
 #pragma warning restore CS0618 // Type or member is obsolete
