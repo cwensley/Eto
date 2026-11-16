@@ -146,23 +146,7 @@ public abstract class GridHandler<TWidget, TCallback> : WinUIFrameworkElement<ct
 	public override sw.Size MeasureOverride(sw.Size constraint, Func<sw.Size, sw.Size> measure)
 	{
 		var size = base.MeasureOverride(constraint, measure);
-		if (!_isMeasured)
-		{
-			_isMeasured = true;
-			if (_pendingScrollItem != null)
-			{
-				// scroll once the rows have been laid out
-				Control.DispatcherQueue.TryEnqueue(() =>
-				{
-					var item = _pendingScrollItem;
-					var column = _pendingScrollColumn;
-					_pendingScrollItem = null;
-					_pendingScrollColumn = null;
-					if (item != null && GetRowOfItem(item) >= 0)
-						Control.ScrollIntoView(item, column);
-				});
-			}
-		}
+		_isMeasured = true;
 		return size;
 	}
 
@@ -196,17 +180,45 @@ public abstract class GridHandler<TWidget, TCallback> : WinUIFrameworkElement<ct
 		}
 	}
 
+	// The DataGrid fails to scroll when it isn't showing any rows yet, e.g. before it is shown or when it was only
+	// measured off screen, so scrolling waits until it has realized rows in a live tree.
+	bool CanScroll => _isMeasured && _loadedRows.Count > 0 && Control.XamlRoot != null;
+
 	protected void ScrollIntoView(object? item, ctk.DataGridColumn? column)
 	{
 		if (item == null)
 			return;
-		if (_isMeasured)
-			Control.ScrollIntoView(item, column);
-		else
+		if (CanScroll)
 		{
-			_pendingScrollItem = item;
-			_pendingScrollColumn = column;
+			Control.ScrollIntoView(item, column);
+			return;
 		}
+		if (_pendingScrollItem == null)
+			Control.LayoutUpdated += Control_LayoutUpdatedScroll;
+		_pendingScrollItem = item;
+		_pendingScrollColumn = column;
+	}
+
+	void Control_LayoutUpdatedScroll(object? sender, object e)
+	{
+		if (_pendingScrollItem == null)
+		{
+			Control.LayoutUpdated -= Control_LayoutUpdatedScroll;
+			return;
+		}
+		if (!CanScroll)
+			return;
+		Control.LayoutUpdated -= Control_LayoutUpdatedScroll;
+		var item = _pendingScrollItem;
+		var column = _pendingScrollColumn;
+		_pendingScrollItem = null;
+		_pendingScrollColumn = null;
+		// scrolling during the layout pass isn't allowed, so do it right after
+		Control.DispatcherQueue.TryEnqueue(() =>
+		{
+			if (GetRowOfItem(item) >= 0 && CanScroll)
+				Control.ScrollIntoView(item, column);
+		});
 	}
 
 	void Control_Loaded(object sender, mux.RoutedEventArgs e)
