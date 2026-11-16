@@ -5,6 +5,7 @@ using Eto.Forms.ThemedControls;
 using Eto.WinUI.Forms;
 using Eto.WinUI.Forms.Controls;
 using Eto.WinUI.Forms.Menu;
+using Eto.WinUI.Forms.ToolBars;
 using Eto.WinUI.Drawing;
 
 namespace Eto.WinUI
@@ -131,12 +132,12 @@ namespace Eto.WinUI
 			//p.Add<PrintSettings.IHandler>(() => new PrintSettingsHandler());
 
 			// Forms.ToolBar
-			//p.Add<CheckToolItem.IHandler>(() => new CheckToolItemHandler());
-			//p.Add<RadioToolItem.IHandler>(() => new RadioToolItemHandler());
-			//p.Add<SeparatorToolItem.IHandler>(() => new SeparatorToolItemHandler());
-			//p.Add<ButtonToolItem.IHandler>(() => new ButtonToolItemHandler());
-			//p.Add<DropDownToolItem.IHandler>(() => new DropDownToolItemHandler());
-			//p.Add<ToolBar.IHandler>(() => new ToolBarHandler());
+			p.Add<CheckToolItem.IHandler>(() => new CheckToolItemHandler());
+			p.Add<RadioToolItem.IHandler>(() => new RadioToolItemHandler());
+			p.Add<SeparatorToolItem.IHandler>(() => new SeparatorToolItemHandler());
+			p.Add<ButtonToolItem.IHandler>(() => new ButtonToolItemHandler());
+			p.Add<DropDownToolItem.IHandler>(() => new DropDownToolItemHandler());
+			p.Add<ToolBar.IHandler>(() => new ToolBarHandler());
 
 			// Forms
 			p.Add<AboutDialog.IHandler>(() => new ThemedAboutDialogHandler());

@@ -20,10 +20,38 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 	muc.MenuBar? _menuBarHost;
 	mui.FrameworkElement? _content;
 	MenuBar? _menu;
+	Eto.Forms.ToolBar? _toolBar;
 
 	public override IntPtr NativeHandle => WindowNative.GetWindowHandle(Control);
 	public override mui.FrameworkElement ContainerControl => _rootGrid;
-	public ToolBar ToolBar { get; set; }
+	public Eto.Forms.ToolBar? ToolBar
+	{
+		get => _toolBar;
+		set
+		{
+			if (_toolBar?.Handler is ToolBars.ToolBarHandler oldHandler)
+			{
+				oldHandler.DockChanged -= ToolBar_DockChanged;
+				_rootGrid.Children.Remove(oldHandler.Control);
+			}
+			_toolBar = value;
+			if (_toolBar?.Handler is ToolBars.ToolBarHandler handler)
+			{
+				handler.DockChanged += ToolBar_DockChanged;
+				SetToolBarRow(handler);
+				_rootGrid.Children.Add(handler.Control);
+			}
+		}
+	}
+
+	void ToolBar_DockChanged(object? sender, EventArgs e)
+	{
+		if (sender is ToolBars.ToolBarHandler handler)
+			SetToolBarRow(handler);
+	}
+
+	static void SetToolBarRow(ToolBars.ToolBarHandler handler) => muc.Grid.SetRow(handler.Control, handler.Dock == ToolBarDock.Bottom ? 4 : 2);
+
 	public double Opacity { get; set; }
 	public string Title
 	{
@@ -101,7 +129,7 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 		if (_content != null)
 			_rootGrid.Children.Remove(_content);
 		_content = content;
-		muc.Grid.SetRow(content, 2);
+		muc.Grid.SetRow(content, 3);
 		_rootGrid.Children.Add(content);
 	}
 
@@ -127,10 +155,12 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 
 		_rootGrid.Background = mux.Application.Current.Resources["ApplicationPageBackgroundThemeBrush"] as muxm.Brush;
 
-		// Define rows: title, menu, content
+		// Define rows: title, menu, top toolbar, content, bottom toolbar
+		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
 		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
 		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
 		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = new mux.GridLength(1, mux.GridUnitType.Star) });
+		_rootGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
 
 		// add title to the toolbar
 		_title.FontSize = 14;
