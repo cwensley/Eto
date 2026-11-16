@@ -20,7 +20,8 @@ public class CheckBoxHandler : WinUIControl<muc.CheckBox, CheckBox, CheckBox.ICa
 	public bool UseMnemonic { get; set; }
 	public bool AlwaysShowMnemonic { get; set; }
 
-	protected override muc.CheckBox CreateControl() => new();
+	// WinUI's style gives it a minimum width of 120, so it would be wider than its content
+	protected override muc.CheckBox CreateControl() => new() { MinWidth = 0 };
 
 	protected override void Initialize()
 	{

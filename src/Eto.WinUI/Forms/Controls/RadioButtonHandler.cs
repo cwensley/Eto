@@ -21,7 +21,8 @@ public class RadioButtonHandler : WinUIControl<muc.RadioButton, RadioButton, Rad
 	RadioButton? _controller;
 	bool _settingGroup;
 
-	protected override muc.RadioButton CreateControl() => new() { GroupName = Guid.NewGuid().ToString() };
+	// WinUI's style gives it a minimum width of 120, so it would be wider than its content
+	protected override muc.RadioButton CreateControl() => new() { GroupName = Guid.NewGuid().ToString(), MinWidth = 0 };
 
 	public RadioButton? Controller
 	{
