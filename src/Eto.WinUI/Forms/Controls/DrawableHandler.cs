@@ -65,6 +65,19 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 	protected override void Initialize()
 	{
 		base.Initialize();
+
+		// WinUI raises an extra Unloaded for a canvas that was in the tree when a ContentControl above it was measured
+		// before its window was shown, after which Win2D never redraws (microsoft/Win2D#700). So the canvas is only
+		// ever added to a live tree.
+		var border = (ContentControl)ContainerControl;
+		border.Content = null;
+		border.Loaded += (s, e) => border.Content = Control;
+		border.Unloaded += (s, e) =>
+		{
+			if (!border.IsLoaded)
+				border.Content = null;
+		};
+
 		Control.Draw += (s, e) =>
 		{
 			// disposing closes any clip layer, which must happen before the session ends
@@ -74,6 +87,7 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 			Callback.OnPaint(Widget, args);
 		};
 	}
+
 
 	public Graphics CreateGraphics()
 	{
@@ -98,10 +112,12 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 	public override void Invalidate(bool invalidateChildren)
 	{
 		Control.Invalidate();
+		base.Invalidate(invalidateChildren);
 	}
 
 	public override void Invalidate(Rectangle rect, bool invalidateChildren)
 	{
 		Control.Invalidate();
+		base.Invalidate(rect, invalidateChildren);
 	}
 }

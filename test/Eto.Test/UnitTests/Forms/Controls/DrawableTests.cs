@@ -5,6 +5,38 @@ namespace Eto.Test.UnitTests.Forms.Controls
 	[TestFixture]
 	public class DrawableTests : TestBase
 	{
+		[TestCase(false, false)]
+		[TestCase(true, false)]
+		[TestCase(true, true)]
+		public void InvalidateShouldRepaintAfterShown(bool inContainers, bool invalidateParent)
+		{
+			int paints = 0;
+			int before = -1, after = -1;
+			Form(form =>
+			{
+				var drawable = new Drawable { Size = new Size(100, 100) };
+				drawable.Paint += (sender, e) => paints++;
+				Control content = inContainers ? new TableLayout(new TableRow(new Panel { Content = drawable })) : drawable;
+				form.Content = content;
+				form.Shown += async (sender, e) =>
+				{
+					await Task.Delay(300);
+					before = paints;
+					for (int i = 0; i < 3; i++)
+					{
+						if (invalidateParent)
+							content.Invalidate();
+						else
+							drawable.Invalidate();
+						await Task.Delay(200);
+					}
+					after = paints;
+					form.Close();
+				};
+			});
+			Assert.That(after, Is.GreaterThanOrEqualTo(before + 3), "Each Invalidate should cause a paint");
+		}
+
 		[Test, ManualTest]
 		public void DrawableWithCanFocusShouldGetFirstMouseDownOnInactiveWindow()
 		{
