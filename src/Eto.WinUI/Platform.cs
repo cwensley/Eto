@@ -4,6 +4,7 @@ using Eto.IO;
 using Eto.Forms.ThemedControls;
 using Eto.WinUI.Forms;
 using Eto.WinUI.Forms.Controls;
+using Eto.WinUI.Forms.Menu;
 using Eto.WinUI.Drawing;
 
 namespace Eto.WinUI
@@ -115,13 +116,13 @@ namespace Eto.WinUI
 			p.Add<CollectionEditor.IHandler>(() => new ThemedCollectionEditorHandler());
 
 			// Forms.Menu
-			//p.Add<CheckMenuItem.IHandler>(() => new CheckMenuItemHandler());
-			//p.Add<ContextMenu.IHandler>(() => new ContextMenuHandler());
-			//p.Add<ButtonMenuItem.IHandler>(() => new ButtonMenuItemHandler());
-			//p.Add<MenuBar.IHandler>(() => new MenuBarHandler());
-			//p.Add<RadioMenuItem.IHandler>(() => new RadioMenuItemHandler());
-			//p.Add<SeparatorMenuItem.IHandler>(() => new SeparatorMenuItemHandler());
-			//p.Add<SubMenuItem.IHandler>(() => new SubMenuItemHandler());
+			p.Add<CheckMenuItem.IHandler>(() => new CheckMenuItemHandler());
+			p.Add<ContextMenu.IHandler>(() => new ContextMenuHandler());
+			p.Add<ButtonMenuItem.IHandler>(() => new ButtonMenuItemHandler());
+			p.Add<MenuBar.IHandler>(() => new MenuBarHandler());
+			p.Add<RadioMenuItem.IHandler>(() => new RadioMenuItemHandler());
+			p.Add<SeparatorMenuItem.IHandler>(() => new SeparatorMenuItemHandler());
+			p.Add<SubMenuItem.IHandler>(() => new SubMenuItemHandler());
 
 			// Forms.Printing
 			//p.Add<PrintDialog.IHandler>(() => new PrintDialogHandler());
