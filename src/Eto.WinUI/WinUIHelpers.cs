@@ -22,7 +22,7 @@ namespace Eto.Forms
 		/// <param name="attach">If set to <c>true</c> the control is to be attached to an existing application, or <c>false</c> to get the native control directly.</param>
 		public static mux.FrameworkElement? ToNative(this Control? control, bool attach = false)
 		{
-			if (control?.Handler is not IWinUIFrameworkElement handler)
+			if (control == null)
 				return null;
 
             if (attach && !control.Loaded)
@@ -30,7 +30,8 @@ namespace Eto.Forms
                 control.AttachNative();
                 //    handler.SetScale(false, false);
             }
-			return handler.ContainerControl;
+			// themed controls wrap another Eto control
+			return control.GetContainerControl();
 		}
 
 		/// <summary>

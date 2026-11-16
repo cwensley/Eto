@@ -6,6 +6,7 @@ public interface IWinUIFrameworkElement
 {
 	sw.Size MeasureOverride(sw.Size constraint, Func<sw.Size, sw.Size> measure);
 	mux.FrameworkElement ContainerControl { get; }
+	void SetEnabled(bool parentEnabled);
 }
 
 public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback> : WidgetHandler<TControl, TWidget, TCallback>, Control.IHandler, IWinUIFrameworkElement
@@ -79,7 +80,54 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	public abstract Color BackgroundColor { get; set; }
 
 
-	public virtual bool Enabled { get; set; } = true;
+	static readonly object Enabled_Key = new object();
+	static readonly object ControlEnabled_Key = new object();
+
+	// Enabled is tracked here rather than read from WinUI, which only propagates it between
+	// muc.Control elements in a live tree, so a disabled parent always disables its children.
+	public virtual bool Enabled
+	{
+		get => ControlEnabled;
+		set => SetEnabled(ParentEnabled, value);
+	}
+
+	protected bool ParentEnabled => Widget.VisualParent?.Enabled != false;
+
+	public void SetEnabled(bool parentEnabled) => SetEnabled(parentEnabled, null);
+
+	void SetEnabled(bool parentEnabled, bool? newValue)
+	{
+		var controlEnabled = ControlEnabled;
+		var enabled = Widget.Properties.Get<bool?>(Enabled_Key);
+		if (enabled == null || newValue != null)
+			Widget.Properties.Set<bool?>(Enabled_Key, enabled = newValue ?? controlEnabled);
+
+		var newEnabled = parentEnabled && enabled.Value;
+		if (controlEnabled != newEnabled)
+		{
+			ControlEnabled = newEnabled;
+			Callback.OnEnabledChanged(Widget, EventArgs.Empty);
+		}
+	}
+
+	protected virtual bool ControlEnabled
+	{
+		get => Widget.Properties.Get<bool>(ControlEnabled_Key, true);
+		set
+		{
+			Widget.Properties.Set(ControlEnabled_Key, value, true);
+			SetNativeEnabled(value);
+		}
+	}
+
+	protected virtual void SetNativeEnabled(bool enabled)
+	{
+		if (ContainerControl is muc.Control container)
+			container.IsEnabled = enabled;
+		if (Control is muc.Control control && !ReferenceEquals(control, ContainerControl))
+			control.IsEnabled = enabled;
+	}
+
 	public virtual bool HasFocus => ContainerControl.FocusState != mux.FocusState.Unfocused;
 	public virtual bool Visible
 	{
@@ -124,8 +172,16 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	public virtual SizeF GetPreferredSize(SizeF availableSize)
 	{
-		ContainerControl.Measure(availableSize.ToWinUI());
-		return ContainerControl.DesiredSize.ToEto();
+		// a window's content goes live with the window, so it can't be hosted elsewhere
+		var top = (Control)Widget;
+		while (top.VisualParent != null)
+			top = top.VisualParent;
+		if (top is Window)
+		{
+			ContainerControl.Measure(availableSize.ToWinUI());
+			return ContainerControl.DesiredSize.ToEto();
+		}
+		return MeasureHost.Measure(ContainerControl, availableSize.ToWinUI()).ToEto();
 	}
 
 	public virtual void Invalidate(bool invalidateChildren)
@@ -202,13 +258,14 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	public virtual void SetParent(Container oldParent, Container newParent)
 	{
+		SetEnabled(ParentEnabled);
 	}
 
 	public virtual void SuspendLayout()
 	{
 	}
 
-	public virtual void UpdateLayout() => ContainerControl.InvalidateMeasure();
+	public virtual void UpdateLayout() => ContainerControl.UpdateLayout();
 
 	public virtual sw.Size MeasureOverride(sw.Size constraint, Func<sw.Size, sw.Size> measure)
 	{
@@ -371,6 +428,12 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 				break;
 			case Eto.Forms.Control.ThemeChangedEvent:
 				ContainerControl.ActualThemeChanged += (sender, e) => Callback.OnThemeChanged(Widget, EventArgs.Empty);
+				break;
+			case Eto.Forms.Control.EnabledChangedEvent:
+				// raised by SetEnabled
+				break;
+			case Eto.Forms.Control.SizeChangedEvent:
+				ContainerControl.SizeChanged += (sender, e) => Callback.OnSizeChanged(Widget, EventArgs.Empty);
 				break;
 			case Eto.Forms.Control.GotFocusEvent:
 				ContainerControl.GotFocus += (sender, e) => Callback.OnGotFocus(Widget, EventArgs.Empty);

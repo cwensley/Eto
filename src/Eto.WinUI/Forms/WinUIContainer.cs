@@ -10,6 +10,17 @@ public abstract class WinUIContainer<TControl, TWidget, TCallback> : WinUIFramew
 	public virtual Size ClientSize { get; set; }
 	public virtual bool RecurseToChildren => true;
 	public override IEnumerable<Control> VisualControls => Widget.Controls;
+
+	protected override bool ControlEnabled
+	{
+		get => base.ControlEnabled;
+		set
+		{
+			base.ControlEnabled = value;
+			foreach (var child in Widget.VisualControls)
+				child.GetFrameworkElement()?.SetEnabled(value);
+		}
+	}
 }
 
 
@@ -21,5 +32,16 @@ public abstract class WinUIBorderedContainer<TControl, TWidget, TCallback> : Win
 	public virtual Size ClientSize { get; set; }
 	public virtual bool RecurseToChildren => true;
 	public override IEnumerable<Control> VisualControls => Widget.Controls;
+
+	protected override bool ControlEnabled
+	{
+		get => base.ControlEnabled;
+		set
+		{
+			base.ControlEnabled = value;
+			foreach (var child in Widget.VisualControls)
+				child.GetFrameworkElement()?.SetEnabled(value);
+		}
+	}
 }
 

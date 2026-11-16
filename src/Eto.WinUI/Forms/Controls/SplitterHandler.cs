@@ -34,7 +34,6 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 	Control? _panel1, _panel2;
 	//PropertyChangeNotifier _panel1VisibilityNotifier;
 	//PropertyChangeNotifier _panel2VisibilityNotifier;
-	bool _positionChanged;
 
 
 	//public override sw.Size MeasureOverride(sw.Size constraint, Func<sw.Size, sw.Size> measure)
@@ -78,7 +77,11 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		{
 			Background = SystemColorsHandler.ControlFillColorDefaultBrush,
 			IsThumbVisible = true,
-			ResizeBehavior = cwc.GridSplitter.GridResizeBehavior.PreviousAndNext
+			ResizeBehavior = cwc.GridSplitter.GridResizeBehavior.PreviousAndNext,
+			// the default style has a minimum size larger than SplitterWidth
+			MinWidth = 0,
+			MinHeight = 0,
+			Padding = new mux.Thickness(0)
 		};
 		_pane1 = new cwc.DockPanel { LastChildFill = true };
 		_pane2 = new cwc.DockPanel { LastChildFill = true };
@@ -89,8 +92,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		Control.Children.Add(_pane2);
 
 		UpdateOrientation();
-		Control.Loaded += Control_Loaded;
-		Control.SizeChanged += (sender, e) => ResetMinMax();
+		Control.SizeChanged += Control_SizeChanged;
 
 		//_panel1VisibilityNotifier = new PropertyChangeNotifier(mux.UIElement.VisibilityProperty);
 		//_panel1VisibilityNotifier.ValueChanged += HandlePanel1IsVisibleChanged;
@@ -99,12 +101,20 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		//_panel2VisibilityNotifier.ValueChanged += HandlePanel2IsVisibleChanged;
 	}
 
-	private void Control_Loaded(object sender, mux.RoutedEventArgs e)
+	// set once the grid has its first size, as Loaded is raised asynchronously so a splitter added to a shown
+	// window would still be unpositioned after an explicit UpdateLayout()
+	bool _isLaidOut;
+
+	private void Control_SizeChanged(object sender, mux.SizeChangedEventArgs e)
 	{
-		// only set on initial load, subsequent loads should keep the last position
-		Control.Loaded -= Control_Loaded;
+		if (!_isLaidOut)
+		{
+			// only set initially, subsequent loads should keep the last position
+			_isLaidOut = true;
+			ResetMinMax();
+			SetInitialPosition();
+		}
 		ResetMinMax();
-		SetInitialPosition();
 	}
 
 	public override void AttachEvent(string id)
@@ -112,21 +122,25 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		switch (id)
 		{
 			case Splitter.PositionChangedEvent:
-				PositionChangedEnabled++;
-				//AttachPropertyChanged(muc.RowDefinition.HeightProperty, HandlePositionChanged, Control.RowDefinitions[0], new object());
-				//AttachPropertyChanged(muc.RowDefinition.HeightProperty, HandlePositionChanged, Control.RowDefinitions[2], new object());
-				//AttachPropertyChanged(muc.ColumnDefinition.WidthProperty, HandlePositionChanged, Control.ColumnDefinitions[0], new object());
-				//AttachPropertyChanged(muc.ColumnDefinition.WidthProperty, HandlePositionChanged, Control.ColumnDefinitions[2], new object());
-				PositionChangedEnabled--;
-				break;
 			case Splitter.PositionChangingEvent:
-				_splitter.DragStarting += splitter_DragStarted;
-				_splitter.DragLeave += splitter_DragCompleted;
-				_splitter.DragOver += splitter_DragDelta;
-				break;
 			case Splitter.PositionChangeStartedEvent:
 			case Splitter.PositionChangeCompletedEvent:
-				HandleEvent(Splitter.PositionChangingEvent);
+				if (_dragEventsAttached)
+					break;
+				_dragEventsAttached = true;
+				// GridSplitter resizes the columns itself, so report the position as the first pane changes size
+				_splitter.ManipulationStarted += (sender, e) =>
+				{
+					_isDragging = true;
+					_dragPosition = Position;
+					Callback.OnPositionChangeStarted(Widget, EventArgs.Empty);
+				};
+				_splitter.ManipulationCompleted += (sender, e) =>
+				{
+					_isDragging = false;
+					Callback.OnPositionChangeCompleted(Widget, EventArgs.Empty);
+				};
+				_pane1.SizeChanged += (sender, e) => HandleDragPositionChanged();
 				break;
 			default:
 				base.AttachEvent(id);
@@ -134,90 +148,29 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		}
 	}
 
-	private void splitter_DragDelta(object sender, mux.DragEventArgs e)
-	{
-		_positionChanged = false;
-		var pos = Position;
-		//e.Handled = HandlePositionChanging(e.HorizontalChange, e.VerticalChange);
-		//if (e.Handled && !_positionChanged)
-		//{
-		//	Position = pos;
-		//}
-	}
+	bool _dragEventsAttached;
+	bool _isDragging;
+	int _dragPosition;
 
-	private void splitter_DragCompleted(object sender, mux.DragEventArgs e)
+	void HandleDragPositionChanged()
 	{
-		//e.Handled = HandlePositionChanging(e.HorizontalChange, e.VerticalChange);
-		Callback.OnPositionChangeCompleted(Widget, EventArgs.Empty);
-	}
-
-	private void splitter_DragStarted(object sender, DragStartingEventArgs e)
-	{
-		Callback.OnPositionChangeStarted(Widget, EventArgs.Empty);
-		//e.Handled = HandlePositionChanging(e.HorizontalOffset, e.VerticalOffset);
-	}
-
-	void HandlePositionChanged(object sender, mux.DependencyPropertyChangedEventArgs e)
-	{
-		if (PositionChangedEnabled > 0)
+		if (!_isDragging || PositionChangedEnabled > 0)
 			return;
-		// we use actual width vs. width itself, so we have to use the value passed in
-		var old = _position;
-		var pos = (mux.GridLength)e.NewValue;
-		if (pos.GridUnitType != mux.GridUnitType.Pixel)
+		var newPosition = Position;
+		if (newPosition == _dragPosition)
 			return;
-
-		var newPosition = (int)Math.Round(pos.Value);
-
-		//if (sender is PropertyChangeNotifier notifier &&
-		//	(notifier.PropertySource == Control.ColumnDefinitions[2] || notifier.PropertySource == Control.RowDefinitions[2]))
-		//{
-		//	// invert position, we are resizing the second pane, not the first
-		//	newPosition = (int)Math.Round(GetAvailableSize() - newPosition);
-		//}
-		if (newPosition != Position)
-		{
-			var args = new SplitterPositionChangingEventArgs(newPosition);
-			// Console.WriteLine($"Source: PositionChanged: {newPosition}");
-			Callback.OnPositionChanging(Widget, args);
-			if (args.Cancel)
-			{
-				return;
-			}
-			_position = newPosition;
-			Callback.OnPositionChanged(Widget, EventArgs.Empty);
-			_position = old;
-		}
-	}
-
-	bool HandlePositionChanging(double horizontal, double vertical, [System.Runtime.CompilerServices.CallerMemberName] string source = null)
-	{
-		var position = DoublePosition;
-		if (_orientation == Orientation.Horizontal)
-			position += horizontal;
-		else
-			position += vertical;
-
-		// restrict to control size
-		position = Math.Max(0, Math.Min(GetAvailableSize(false), position));
-
-		var intPosition = (int)Math.Round(position);
-
-		// Console.WriteLine($"Source: {source}, {intPosition}");
-		var args = new SplitterPositionChangingEventArgs(intPosition);
+		var args = new SplitterPositionChangingEventArgs(newPosition);
 		Callback.OnPositionChanging(Widget, args);
 		if (args.Cancel)
-			return true;
-
-		if (intPosition == Position)
-			return false;
-
-		if (_fixedPanel == SplitterFixedPanel.None)
 		{
-			Callback.OnPositionChanged(Widget, EventArgs.Empty);
+			// put it back, GridSplitter can't be stopped mid drag
+			PositionChangedEnabled++;
+			SetPosition(_dragPosition);
+			PositionChangedEnabled--;
+			return;
 		}
-
-		return false;
+		_dragPosition = newPosition;
+		Callback.OnPositionChanged(Widget, EventArgs.Empty);
 	}
 
 	static object PositionChangedEnabled_Key = new object();
@@ -408,7 +361,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		get { return _fixedPanel; }
 		set
 		{
-			if (Control.IsLoaded)
+			if (_isLaidOut)
 			{
 				if (HasHiddenPanels)
 					UpdateRelativePosition(value);
@@ -426,7 +379,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 				HandleEvent(Splitter.PositionChangingEvent);
 			}
 
-			UpdateColumnSizing(Control.IsLoaded);
+			UpdateColumnSizing(_isLaidOut);
 		}
 	}
 
@@ -481,7 +434,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		{
 			if (_position != null)
 				return _position.Value;
-			if (!Control.IsLoaded && !WasLoaded)
+			if (!_isLaidOut && !WasLoaded)
 				return 0;
 			if (_splitter.ResizeDirection == cwc.GridSplitter.GridResizeDirection.Columns)
 				return Control.ColumnDefinitions[0].ActualWidth;
@@ -515,7 +468,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 
 	double GetAvailableSize()
 	{
-		return GetAvailableSize(!Control.IsLoaded);
+		return GetAvailableSize(!_isLaidOut);
 	}
 
 	double GetAvailableSize(bool desired)
@@ -542,7 +495,8 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 		{
 			var sz = GetAvailableSize();
 			if (_fixedPanel == SplitterFixedPanel.Panel2)
-				_relative = sz <= 0 ? 0 : sz - pos;
+				// layout rounding can leave fractional sizes, but fixed sizes are whole pixels
+				_relative = sz <= 0 ? 0 : Math.Round(sz - DoublePosition);
 			else
 				_relative = sz <= 0 ? 0.5 : pos / (double)sz;
 		}
@@ -620,9 +574,8 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 	{
 		if (SetHiddenPanels())
 			return;
-		_positionChanged = true;
 		SetLength(1, mux.GridLength.Auto);
-		if (!Control.IsLoaded)
+		if (!_isLaidOut)
 		{
 			_position = newPosition;
 			_relative = double.NaN;
@@ -657,7 +610,6 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 	{
 		if (SetHiddenPanels())
 			return;
-		_positionChanged = true;
 		_position = null;
 		_relative = newRelative;
 		PositionChangedEnabled++;
@@ -757,7 +709,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 
 	void HandlePanelVisibleChanged(ref bool isVisible, Control panel)
 	{
-		if ((Control.IsLoaded || WasLoaded) && isVisible != panel.Visible)
+		if ((_isLaidOut || WasLoaded) && isVisible != panel.Visible)
 		{
 			isVisible = panel.Visible;
 			if (!panel.Visible)
@@ -815,7 +767,7 @@ public class SplitterHandler : WinUIContainer<EtoGrid, Splitter, Splitter.ICallb
 			Control.RowDefinitions[2].MinHeight = _panel2MinimumSize;
 		}
 
-		if (Control.IsLoaded)
+		if (_isLaidOut)
 		{
 			var available = this.GetAvailableSize();
 			// need to set the max height of resizing panel otherwise it can grow outside of window

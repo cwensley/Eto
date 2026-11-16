@@ -845,6 +845,9 @@ public class WinUIWindow<TControl, TWidget, TCallback> : WinUIPanel<TControl, TW
 		// Windows destroys owned windows with their owner without WinUI knowing, so close them properly first
 		foreach (var owned in Application.Instance?.Windows.Where(r => r.Owner == Widget).ToList() ?? [])
 			owned.Close();
+		// WinUI quits when its last window closes, which would never happen with the hidden measuring window open
+		if (Widget == Application.Instance?.MainForm)
+			MeasureHost.Shutdown();
 		OnClosed();
 		Callback.OnClosed(Widget, EventArgs.Empty);
 	}

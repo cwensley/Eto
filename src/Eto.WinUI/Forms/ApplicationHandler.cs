@@ -41,6 +41,9 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 				Source = new Uri("ms-appx:///Eto.WinUI/Forms/Controls/BindingTemplates.xaml")
 			});
 
+		// create it now, as it only goes live once the dispatcher gets to it
+		MeasureHost.Prepare();
+
 		Callback.OnInitialized(Widget, EventArgs.Empty);
 	}
 

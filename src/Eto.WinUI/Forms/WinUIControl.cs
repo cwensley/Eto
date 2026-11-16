@@ -22,12 +22,6 @@ public abstract class WinUIControl<TControl, TWidget, TCallback> : WinUIFramewor
 		}
 	}
 
-	public override bool Enabled
-	{
-		get => Control.IsEnabled;
-		set => Control.IsEnabled = value;
-	}
-
 	public override Color BackgroundColor
 	{
 		get => Control.Background.ToEtoColor();
