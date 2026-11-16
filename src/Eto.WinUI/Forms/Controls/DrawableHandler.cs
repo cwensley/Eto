@@ -41,6 +41,12 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 		set => Control.Padding = value.ToWinUI();
 	}
 
+	public override Size ClientSize
+	{
+		get => Control.IsLoaded ? new Size((int)Math.Round(Control.ActualWidth), (int)Math.Round(Control.ActualHeight)) : base.ClientSize;
+		set => base.ClientSize = value;
+	}
+
 	public void Create()
 	{
 	}
@@ -61,8 +67,10 @@ public class DrawableHandler : WinUIBorderedContainer<CanvasControl, Drawable, D
 		base.Initialize();
 		Control.Draw += (s, e) =>
 		{
-			var g = new Graphics(new GraphicsHandler(e.DrawingSession));
-			var args = new PaintEventArgs(g, new RectangleF(0, 0, (float)Control.ActualWidth, (float)Control.ActualHeight));
+			// disposing closes any clip layer, which must happen before the session ends
+			var bounds = new RectangleF(0, 0, (float)Control.ActualWidth, (float)Control.ActualHeight);
+			using var g = new Graphics(new GraphicsHandler(e.DrawingSession, bounds));
+			var args = new PaintEventArgs(g, bounds);
 			Callback.OnPaint(Widget, args);
 		};
 	}

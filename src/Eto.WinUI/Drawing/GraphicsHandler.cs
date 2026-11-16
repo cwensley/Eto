@@ -24,10 +24,10 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	IDisposable? _clipResource;
 	RectangleF _clipBounds = DefaultClipBounds;
 	RectangleF _initialClipBounds = DefaultClipBounds;
-	ImageInterpolation _imageInterpolation = ImageInterpolation.Medium;
-	PixelOffsetMode _pixelOffsetMode = PixelOffsetMode.Half;
+	ImageInterpolation _imageInterpolation = ImageInterpolation.Default;
+	PixelOffsetMode _pixelOffsetMode = PixelOffsetMode.None;
 	bool _disposeControl;
-	
+
 	public GraphicsHandler()
 	{
 	}
@@ -35,6 +35,13 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	public GraphicsHandler(CanvasDrawingSession drawingSession)
 	{
 		InitializeDrawingSession(drawingSession);
+	}
+
+	/// <summary>Creates a handler for a session that draws within the specified bounds.</summary>
+	public GraphicsHandler(CanvasDrawingSession drawingSession, RectangleF bounds)
+	{
+		InitializeDrawingSession(drawingSession);
+		_initialClipBounds = _clipBounds = bounds;
 	}
 
 	protected override bool DisposeControl => _disposeControl;
@@ -67,7 +74,36 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	public IMatrix CurrentTransform => new MatrixHandler(Control.Transform);
 
-	public RectangleF ClipBounds => _clipBounds;
+	// the clip is kept in device space, but is reported in the current coordinate space
+	public RectangleF ClipBounds
+	{
+		get
+		{
+			var transform = Control.Transform;
+			if (transform.IsIdentity || !Matrix3x2.Invert(transform, out var inverse))
+				return _clipBounds;
+			return TransformRectangle(_clipBounds, inverse);
+		}
+	}
+
+	// strokes are offset by half a pixel so lines on integer coordinates are crisp, like other platforms
+	readonly struct StrokeOffset(CanvasDrawingSession? session, Matrix3x2 original) : IDisposable
+	{
+		public void Dispose()
+		{
+			if (session != null)
+				session.Transform = original;
+		}
+	}
+
+	StrokeOffset BeginStroke()
+	{
+		if (_pixelOffsetMode != PixelOffsetMode.None)
+			return default;
+		var transform = Control.Transform;
+		Control.Transform = transform * Matrix3x2.CreateTranslation(0.5f, 0.5f);
+		return new StrokeOffset(Control, transform);
+	}
 
 	public void Clear(SolidBrush brush)
 	{
@@ -77,18 +113,17 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 	public void CreateFromImage(Bitmap image)
 	{
+		if (image.Handler is not BitmapHandler bitmapHandler)
+			throw new NotSupportedException("Graphics can only draw onto a Bitmap");
 		_image = image;
 		_initialClipBounds = new RectangleF(0, 0, image.Width, image.Height);
 		_clipBounds = _initialClipBounds;
+		// the shared device is free-threaded, so bitmaps can be drawn on from any thread
 		_renderTarget = new CanvasRenderTarget(CanvasDevice.GetSharedDevice(), Math.Max(image.Width, 1), Math.Max(image.Height, 1), 96f);
-		CopySourceImage(_renderTarget, image);
-		_initializeControlFromImage();
-	}
-
-	void _initializeControlFromImage()
-	{
+		if (image.Width > 0 && image.Height > 0)
+			_renderTarget.SetPixelBytes(bitmapHandler.GetPremultipliedBgra());
 		_disposeControl = true;
-		InitializeDrawingSession(_renderTarget!.CreateDrawingSession());
+		InitializeDrawingSession(_renderTarget.CreateDrawingSession());
 	}
 
 	public void DrawArc(Pen pen, float x, float y, float width, float height, float startAngle, float sweepAngle)
@@ -99,18 +134,14 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 			return;
 		}
 
-		var points = GetArcPoints(x, y, width, height, startAngle, sweepAngle).ToArray();
-		if (points.Length < 2)
-			return;
-
-		for (var i = 1; i < points.Length; i++)
-			DrawLine(pen, points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y);
+		DrawFigure(pen, GetArcPoints(x, y, width, height, startAngle, sweepAngle), false);
 	}
 
 	public void DrawEllipse(Pen pen, float x, float y, float width, float height)
 	{
 		using var brushRef = CreateBrushReference(pen.Brush);
 		using var strokeStyle = CreateStrokeStyle(pen);
+		using var offset = BeginStroke();
 		Control.DrawEllipse(
 			x + width / 2f,
 			y + height / 2f,
@@ -141,17 +172,33 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	{
 		using var brushRef = CreateBrushReference(pen.Brush);
 		using var strokeStyle = CreateStrokeStyle(pen);
+		using var offset = BeginStroke();
 		Control.DrawLine(startx, starty, endx, endy, brushRef.Brush, pen.Thickness, strokeStyle);
 	}
 
 	public void DrawLines(Pen pen, IEnumerable<PointF> points)
 	{
+		DrawFigure(pen, points, false);
+	}
+
+	// one figure so the pen's line joins are applied between segments
+	void DrawFigure(Pen pen, IEnumerable<PointF> points, bool closed)
+	{
 		var array = points as PointF[] ?? points.ToArray();
 		if (array.Length < 2)
 			return;
 
+		using var builder = new CanvasPathBuilder(Control);
+		builder.BeginFigure(ToVector(array[0]));
 		for (var i = 1; i < array.Length; i++)
-			DrawLine(pen, array[i - 1].X, array[i - 1].Y, array[i].X, array[i].Y);
+			builder.AddLine(ToVector(array[i]));
+		builder.EndFigure(closed ? CanvasFigureLoop.Closed : CanvasFigureLoop.Open);
+		using var geometry = CanvasGeometry.CreatePath(builder);
+
+		using var brushRef = CreateBrushReference(pen.Brush);
+		using var strokeStyle = CreateStrokeStyle(pen);
+		using var offset = BeginStroke();
+		Control.DrawGeometry(geometry, brushRef.Brush, pen.Thickness, strokeStyle);
 	}
 
 	public void DrawPath(Pen pen, IGraphicsPath path)
@@ -161,23 +208,20 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 
 		using var brushRef = CreateBrushReference(pen.Brush);
 		using var strokeStyle = CreateStrokeStyle(pen);
+		using var offset = BeginStroke();
 		Control.DrawGeometry(geometry, brushRef.Brush, pen.Thickness, strokeStyle);
 	}
 
 	public void DrawPolygon(Pen pen, IEnumerable<PointF> points)
 	{
-		var array = points as PointF[] ?? points.ToArray();
-		if (array.Length < 2)
-			return;
-
-		DrawLines(pen, array);
-		DrawLine(pen, array[^1].X, array[^1].Y, array[0].X, array[0].Y);
+		DrawFigure(pen, points, true);
 	}
 
 	public void DrawRectangle(Pen pen, float x, float y, float width, float height)
 	{
 		using var brushRef = CreateBrushReference(pen.Brush);
 		using var strokeStyle = CreateStrokeStyle(pen);
+		using var offset = BeginStroke();
 		Control.DrawRectangle(x, y, width, height, brushRef.Brush, pen.Thickness, strokeStyle);
 	}
 
@@ -187,14 +231,21 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 			return;
 
 		using var brushRef = CreateBrushReference(brush);
-		using var format = CreateTextFormat(font);
-		Control.DrawText(text, x, y, brushRef.Brush, format);
+		using var layout = GetFontHandler(font).CreateTextLayout(Control, text, 0f, 0f);
+		Control.DrawTextLayout(layout, x, y, brushRef.Brush);
 	}
 
 	public void DrawText(FormattedText formattedText, PointF location)
 	{
-		throw new NotSupportedException("WinUI formatted text drawing is not implemented yet.");
+		if (formattedText.Handler is not FormattedTextHandler handler || string.IsNullOrEmpty(handler.Text))
+			return;
+
+		using var brushRef = CreateBrushReference(handler.ForegroundBrush);
+		using var layout = handler.CreateLayout(Control);
+		Control.DrawTextLayout(layout, location.X, location.Y, brushRef.Brush);
 	}
+
+	static FontHandler GetFontHandler(Font font) => font?.Handler as FontHandler ?? (FontHandler)SystemFonts.Default().Handler;
 
 	public void FillEllipse(Brush brush, float x, float y, float width, float height)
 	{
@@ -245,9 +296,8 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		if (string.IsNullOrEmpty(text))
 			return SizeF.Empty;
 
-		using var format = CreateTextFormat(font);
-		using var layout = new CanvasTextLayout(Control, text, format, 0f, 0f);
-		return layout.LayoutBounds.ToEtoF().Size;
+		using var layout = GetFontHandler(font).CreateTextLayout(Control, text, 0f, 0f);
+		return layout.LayoutBoundsIncludingTrailingWhitespace.ToEtoF().Size;
 	}
 
 	public void MultiplyTransform(IMatrix matrix)
@@ -315,8 +365,18 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	{
 		ResetClip();
 		_clipResource = geometry;
-		_clipLayer = Control.CreateLayer(1f, geometry);
+		_clipLayer = CreateDeviceLayer(geometry);
 		_clipBounds = clipBounds;
+	}
+
+	// the clip geometry is already in device space, but layers apply the current transform to it
+	IDisposable CreateDeviceLayer(CanvasGeometry geometry)
+	{
+		var transform = Control.Transform;
+		Control.Transform = Matrix3x2.Identity;
+		var layer = Control.CreateLayer(1f, geometry);
+		Control.Transform = transform;
+		return layer;
 	}
 
 	void CommitRenderTarget()
@@ -325,27 +385,26 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 			return;
 
 		var transform = Control.Transform;
+		var antialiasing = Control.Antialiasing;
+		var textAntialiasing = Control.TextAntialiasing;
 		var clipGeometry = _clipResource as CanvasGeometry;
 		var clipBounds = _clipBounds;
 		_clipLayer?.Dispose();
 		_clipLayer = null;
+		// pixels can only be read once the drawing session has ended
 		Control.Dispose();
 
-		using var stream = new InMemoryRandomAccessStream();
-		_renderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png).AsTask().GetAwaiter().GetResult();
-		var encodedData = ReadAllBytes(stream);
-		stream.Seek(0);
-		var bitmapImage = new BitmapImage();
-		bitmapImage.SetSource(stream);
-		bitmapHandler.SetBitmap(bitmapImage, encodedData);
+		bitmapHandler.SetFromPremultiplied(_renderTarget.GetPixelBytes());
 
 		InitializeDrawingSession(_renderTarget.CreateDrawingSession());
 		Control.Transform = transform;
+		Control.Antialiasing = antialiasing;
+		Control.TextAntialiasing = textAntialiasing;
 		_clipBounds = clipBounds;
 		if (clipGeometry != null)
 		{
 			_clipResource = clipGeometry;
-			_clipLayer = Control.CreateLayer(1f, clipGeometry);
+			_clipLayer = CreateDeviceLayer(clipGeometry);
 		}
 	}
 
@@ -362,13 +421,13 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		if (brush.ControlObject is ICanvasBrush canvasBrush)
 			return new BrushReference(canvasBrush, null);
 
-		if (brush is SolidBrush solidBrush)
+		if (brush.ControlObject is BrushData brushData)
 		{
-			var createdBrush = new CanvasSolidColorBrush(Control, solidBrush.Color.ToWinUI());
+			var createdBrush = brushData.Create(Control);
 			return new BrushReference(createdBrush, createdBrush);
 		}
 
-		throw new NotSupportedException($"Brush type '{brush.GetType().Name}' is not implemented for WinUI graphics yet.");
+		throw new NotSupportedException($"Brush type '{brush.GetType().Name}' is not supported by WinUI graphics.");
 	}
 
 	CanvasStrokeStyle? CreateStrokeStyle(Pen pen)
@@ -397,93 +456,31 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 		return strokeStyle;
 	}
 
-	static void CopySourceImage(CanvasRenderTarget renderTarget, Bitmap image)
-	{
-		using var imageRef = CreateImageReference(renderTarget, image);
-		if (imageRef.Image == null)
-			return;
-
-		using var drawingSession = renderTarget.CreateDrawingSession();
-		drawingSession.DrawImage(imageRef.Image, 0, 0);
-	}
-
 	void DrawImageCore(Image image, RectangleF? source, RectangleF destination)
 	{
 		if (image == null || destination.Width == 0 || destination.Height == 0)
 			return;
 
-		using var imageRef = CreateImageReference(Control, image);
-		if (imageRef.Image == null)
-			throw new NotSupportedException("WinUI image drawing requires a Win2D-compatible image source.");
+		if (image.Handler is not IWinUIImage winUIImage)
+			throw new NotSupportedException($"Image type '{image.GetType().Name}' is not supported by WinUI graphics.");
 
-		var sourceRect = source?.ToWinUI() ?? imageRef.SourceBounds;
-		Control.DrawImage(imageRef.Image, destination.ToWinUI(), sourceRect, 1f, ToCanvasInterpolation(ImageInterpolation));
-	}
+		// pick the icon frame that best fits the destination at this session's DPI
+		var bitmap = winUIImage.GetCanvasBitmap(Control, Control.Dpi / 96f, destination.Size);
+		if (bitmap == null)
+			return;
 
-	static ImageReference CreateImageReference(ICanvasResourceCreator resourceCreator, Image image)
-	{
-		if (image.Handler is not BitmapHandler bitmapHandler)
-			return default;
-
-		var source = bitmapHandler.GetImageClosestToSize(1f, image.Size);
-		if (source == null)
-			return default;
-
-		if (source is WriteableBitmap writeableBitmap)
+		var pixelSize = bitmap.SizeInPixels;
+		var sourceRect = new RectangleF(0, 0, pixelSize.Width, pixelSize.Height);
+		if (source != null)
 		{
-			var bytes = writeableBitmap.PixelBuffer.ToArray();
-			var canvasBitmap = CanvasBitmap.CreateFromBytes(
-				resourceCreator,
-				bytes,
-				writeableBitmap.PixelWidth,
-				writeableBitmap.PixelHeight,
-				DirectXPixelFormat.B8G8R8A8UIntNormalized,
-				96f);
-			return new ImageReference(canvasBitmap, new RectangleF(0, 0, writeableBitmap.PixelWidth, writeableBitmap.PixelHeight).ToWinUI());
+			// the source is in the image's logical units, which may differ from the frame's pixels
+			var imageSize = image.Size;
+			var scaleX = imageSize.Width > 0 ? pixelSize.Width / (float)imageSize.Width : 1f;
+			var scaleY = imageSize.Height > 0 ? pixelSize.Height / (float)imageSize.Height : 1f;
+			var s = source.Value;
+			sourceRect = new RectangleF(s.X * scaleX, s.Y * scaleY, s.Width * scaleX, s.Height * scaleY);
 		}
-
-		if (!string.IsNullOrEmpty(bitmapHandler.FileName))
-		{
-			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, bitmapHandler.FileName).AsTask().GetAwaiter().GetResult();
-			return new ImageReference(canvasBitmap, new RectangleF(0, 0, source.PixelWidth, source.PixelHeight).ToWinUI());
-		}
-
-		if (bitmapHandler.EncodedData != null)
-		{
-			using var stream = new MemoryStream(bitmapHandler.EncodedData);
-			using var randomAccessStream = stream.AsRandomAccessStream();
-			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, randomAccessStream).AsTask().GetAwaiter().GetResult();
-			return new ImageReference(canvasBitmap, new RectangleF(0, 0, canvasBitmap.SizeInPixels.Width, canvasBitmap.SizeInPixels.Height).ToWinUI());
-		}
-
-		if (source is BitmapImage bitmapImage && bitmapImage.UriSource?.IsFile == true)
-		{
-			var canvasBitmap = CanvasBitmap.LoadAsync(resourceCreator, bitmapImage.UriSource.LocalPath).AsTask().GetAwaiter().GetResult();
-			return new ImageReference(canvasBitmap, new RectangleF(0, 0, canvasBitmap.SizeInPixels.Width, canvasBitmap.SizeInPixels.Height).ToWinUI());
-		}
-
-		return default;
-	}
-
-	static byte[] ReadAllBytes(IRandomAccessStream stream)
-	{
-		stream.Seek(0);
-		using var input = stream.GetInputStreamAt(0);
-		using var readStream = input.AsStreamForRead();
-		using var memory = new MemoryStream();
-		readStream.CopyTo(memory);
-		return memory.ToArray();
-	}
-
-	static CanvasTextFormat CreateTextFormat(Font font)
-	{
-		return new CanvasTextFormat
-		{
-			FontFamily = font.FamilyName,
-			FontSize = font.Size,
-			FontWeight = font.Bold ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
-			FontStyle = font.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal,
-		};
+		Control.DrawImage(bitmap, destination.ToWinUI(), sourceRect.ToWinUI(), 1f, ImageInterpolation.ToCanvasInterpolation());
 	}
 
 	static IEnumerable<PointF> GetArcPoints(float x, float y, float width, float height, float startAngle, float sweepAngle)
@@ -507,23 +504,6 @@ public class GraphicsHandler : WidgetHandler<CanvasDrawingSession, Graphics>, Gr
 	static float DegreesToRadians(float degrees) => degrees * MathF.PI / 180f;
 
 	static Vector2 ToVector(PointF point) => new(point.X, point.Y);
-
-	static CanvasImageInterpolation ToCanvasInterpolation(ImageInterpolation interpolation)
-	{
-		return interpolation switch
-		{
-			ImageInterpolation.None => CanvasImageInterpolation.NearestNeighbor,
-			ImageInterpolation.Low => CanvasImageInterpolation.Linear,
-			ImageInterpolation.Medium => CanvasImageInterpolation.Cubic,
-			ImageInterpolation.High => CanvasImageInterpolation.Anisotropic,
-			_ => CanvasImageInterpolation.Linear,
-		};
-	}
-
-	readonly record struct ImageReference(CanvasBitmap? Image, Windows.Foundation.Rect SourceBounds) : IDisposable
-	{
-		public void Dispose() => Image?.Dispose();
-	}
 
 	Vector2 TransformPoint(PointF point) => Vector2.Transform(ToVector(point), Control.Transform);
 

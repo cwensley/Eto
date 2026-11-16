@@ -192,7 +192,7 @@ public static class WinUIConversions
 	public static muxm.Imaging.BitmapSource ToBitmapSource(this Bitmap bitmap)
 	{
 		var handler = (BitmapHandler)bitmap.Handler;
-		return handler.Control;
+		return handler.GetImageClosestToSize(1f, null)!;
 	}
 	
 	/*

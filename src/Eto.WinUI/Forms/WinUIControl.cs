@@ -10,7 +10,17 @@ public abstract class WinUIControl<TControl, TWidget, TCallback> : WinUIFramewor
 {
 	public override FrameworkElement ContainerControl => Control;
 
-	public virtual Font Font { get; set; }
+	static readonly object Font_Key = new object();
+
+	public virtual Font Font
+	{
+		get => Widget.Properties.Get<Font>(Font_Key) ?? Eto.WinUI.Drawing.FontHandler.GetFont(Control);
+		set
+		{
+			Widget.Properties.Set(Font_Key, value);
+			Eto.WinUI.Drawing.FontHandler.Apply(Control, value);
+		}
+	}
 
 	public override bool Enabled
 	{

@@ -38,23 +38,23 @@ namespace Eto.WinUI
 		{
 			// Drawing
 			p.Add<Bitmap.IHandler>(() => new BitmapHandler());
-			//p.Add<FontFamily.IHandler>(() => new FontFamilyHandler());
-			//p.Add<FontTypeface.IHandler>(() => new FontTypefaceHandler());
-			//p.Add<Font.IHandler>(() => new FontHandler());
-			//p.Add<Fonts.IHandler>(() => new FontsHandler());
+			p.Add<FontFamily.IHandler>(() => new FontFamilyHandler());
+			p.Add<FontTypeface.IHandler>(() => new FontTypefaceHandler());
+			p.Add<Font.IHandler>(() => new FontHandler());
+			p.Add<Fonts.IHandler>(() => new FontsHandler());
 			p.Add<Graphics.IHandler>(() => new GraphicsHandler());
 			p.Add<GraphicsPath.IHandler>(() => new GraphicsPathHandler());
 			p.Add<Icon.IHandler>(() => new IconHandler());
 			p.Add<IconFrame.IHandler>(() => new IconFrameHandler());
-			//p.Add<IndexedBitmap.IHandler>(() => new IndexedBitmapHandler());
+			p.Add<IndexedBitmap.IHandler>(() => new IndexedBitmapHandler());
 			p.Add<Matrix.IHandler>(() => new MatrixHandler());
 			p.Add<Pen.IHandler>(() => new PenHandler());
 			p.Add<SolidBrush.IHandler>(() => new SolidBrushHandler());
-			//p.Add<TextureBrush.IHandler>(() => new TextureBrushHandler());
-			//p.Add<LinearGradientBrush.IHandler>(() => new LinearGradientBrushHandler());
-			//p.Add<RadialGradientBrush.IHandler>(() => new RadialGradientBrushHandler());
+			p.Add<TextureBrush.IHandler>(() => new TextureBrushHandler());
+			p.Add<LinearGradientBrush.IHandler>(() => new LinearGradientBrushHandler());
+			p.Add<RadialGradientBrush.IHandler>(() => new RadialGradientBrushHandler());
 			p.Add<SystemColors.IHandler>(() => new SystemColorsHandler());
-			//p.Add<FormattedText.IHandler>(() => new FormattedTextHandler());
+			p.Add<FormattedText.IHandler>(() => new FormattedTextHandler());
 
 			// Forms.Cells
 			//p.Add<CheckBoxCell.IHandler>(() => new CheckBoxCellHandler());
@@ -173,7 +173,7 @@ namespace Eto.WinUI
 			//p.Add<Window.IWindowHandler>(() => new WindowHandler());
 
 			// IO
-			//p.Add<SystemIcons.IHandler>(() => new SystemIconsHandler());
+			p.Add<Eto.Drawing.SystemIcons.IHandler>(() => new SystemIconsHandler());
 
 			// General
 			p.Add<EtoEnvironment.IHandler>(() => new EtoEnvironmentHandler());

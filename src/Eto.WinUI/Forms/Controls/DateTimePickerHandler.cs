@@ -33,7 +33,18 @@ public class DateTimePickerHandler : WinUIBorderedControl<muc.Grid, DateTimePick
 
 	protected override bool PreventUserResize => true;
 
-	public Font Font { get; set; } = null!;
+	static readonly object Font_Key = new object();
+
+	public Font Font
+	{
+		get => Widget.Properties.Get<Font>(Font_Key) ?? Eto.WinUI.Drawing.FontHandler.GetFont(_datePicker);
+		set
+		{
+			Widget.Properties.Set(Font_Key, value);
+			Eto.WinUI.Drawing.FontHandler.Apply(_datePicker, value);
+			Eto.WinUI.Drawing.FontHandler.Apply(_timeTextBox, value);
+		}
+	}
 
 	protected override wf.Size DefaultSize => new(
 		_mode == DateTimePickerMode.DateTime ? DateTimeWidth : _mode == DateTimePickerMode.Time ? TimeWidth : DateWidth,

@@ -1,35 +1,31 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.UI.Xaml.Media.Imaging;
-
 namespace Eto.WinUI.Drawing;
 
 public class IconFrameHandler : IconFrame.IHandler
 {
-	public object Create(IconFrame frame, Bitmap bitmap)
+	// defers loading a frame's bitmap until it is actually used
+	sealed class LazyFrame(Func<Stream> load)
 	{
-		return bitmap;
+		readonly Lazy<Bitmap> _bitmap = new(() =>
+		{
+			using var stream = load();
+			return new Bitmap(stream);
+		});
+
+		public Bitmap Bitmap => _bitmap.Value;
 	}
 
-	public object Create(IconFrame frame, Func<Stream> load)
-	{
-		return new Bitmap(load());
-	}
+	public object Create(IconFrame frame, Bitmap bitmap) => bitmap;
 
-	public object Create(IconFrame frame, Stream stream)
-	{
-		return new Bitmap(stream);
-	}
+	public object Create(IconFrame frame, Func<Stream> load) => new LazyFrame(load);
 
-	public Bitmap GetBitmap(IconFrame frame)
-	{
-		return (Bitmap)frame.ControlObject;
-	}
+	public object Create(IconFrame frame, Stream stream) => new Bitmap(stream);
 
-	public Size GetPixelSize(IconFrame frame)
+	public Bitmap GetBitmap(IconFrame frame) => frame.ControlObject switch
 	{
-		return GetBitmap(frame).Size;
-	}
+		Bitmap bitmap => bitmap,
+		LazyFrame lazy => lazy.Bitmap,
+		_ => throw new InvalidOperationException("Icon frame has no bitmap")
+	};
+
+	public Size GetPixelSize(IconFrame frame) => GetBitmap(frame).Size;
 }

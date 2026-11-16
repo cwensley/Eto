@@ -44,7 +44,18 @@ public class LabelHandler : WinUIBorderedControl<muc.TextBlock, Label, Label.ICa
 		set => Control.Foreground = value.ToWinUIBrush();
 	}
 
-	public Font Font { get; set; }
+	static readonly object Font_Key = new object();
+
+	public Font Font
+	{
+		get => Widget.Properties.Get<Font>(Font_Key) ?? Eto.WinUI.Drawing.FontHandler.GetFont(Control);
+		set
+		{
+			Widget.Properties.Set(Font_Key, value);
+			Eto.WinUI.Drawing.FontHandler.Apply(Control, value);
+		}
+	}
+
 	public bool UseMnemonic { get; set; }
 	public bool AlwaysShowMnemonic { get; set; }
 

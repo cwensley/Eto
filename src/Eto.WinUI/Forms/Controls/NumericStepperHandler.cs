@@ -57,7 +57,17 @@ public class NumericStepperHandler : WinUIBorderedControl<muc.NumberBox, Numeric
 	}
 	
 	public Color TextColor { get; set; }
-	public Font Font { get; set; }
+	static readonly object Font_Key = new object();
+
+	public Font Font
+	{
+		get => Widget.Properties.Get<Font>(Font_Key) ?? Eto.WinUI.Drawing.FontHandler.GetFont(Control);
+		set
+		{
+			Widget.Properties.Set(Font_Key, value);
+			Eto.WinUI.Drawing.FontHandler.Apply(Control, value);
+		}
+	}
 
 	protected override muc.NumberBox CreateControl() => new muc.NumberBox();
 

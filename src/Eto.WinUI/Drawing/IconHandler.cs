@@ -1,61 +1,65 @@
+using Microsoft.Graphics.Canvas;
 using Microsoft.UI.Xaml.Media.Imaging;
-using System.IO;
 
 namespace Eto.WinUI.Drawing;
 
-public class IconHandler : WidgetHandler<BitmapSource, Icon>, Icon.IHandler
+public class IconHandler : WidgetHandler<Icon>, Icon.IHandler, IWinUIImage
 {
+	List<IconFrame>? _frames;
+	Size? _size;
+
 	public IconHandler()
 	{
 	}
 
-	public IconHandler(BitmapSource image)
+	/// <summary>Creates an icon with a single frame from the specified bitmap.</summary>
+	public IconHandler(Bitmap bitmap)
 	{
-		Control = image;
+		_frames = [IconFrame.FromControlObject(1f, bitmap)];
 	}
 
 	public void Create(Stream stream)
 	{
-		var bitmap = new BitmapImage();
-		using var ms = new MemoryStream();
-		stream.CopyTo(ms);
-		ms.Position = 0;
-		bitmap.SetSource(ms.AsRandomAccessStream());
-		Control = bitmap;
+		// each frame of an .ico becomes its own bitmap at scale 1, like other platforms
+		_frames = WinUIImageHelper.Decode(stream, true)
+			.Select(r => IconFrame.FromControlObject(1f, new Bitmap(new BitmapHandler(r.Width, r.Height, r.Pixels))))
+			.ToList();
 	}
 
 	public void Create(string fileName)
 	{
-		var uri = new System.Uri("file:///" + fileName.Replace("\\", "/"));
-		Control = new BitmapImage(uri);
+		using var stream = File.OpenRead(fileName);
+		Create(stream);
 	}
+
+	public void Create(IEnumerable<IconFrame> frames)
+	{
+		_frames = frames.ToList();
+	}
+
+	public IEnumerable<IconFrame> Frames => _frames ??= [];
 
 	public Size Size
 	{
 		get
 		{
-			if (Control == null)
-				return Size.Empty;
-			return new Size((int)Control.PixelWidth, (int)Control.PixelHeight);
+			if (_size != null)
+				return _size.Value;
+			var largest = Frames.OrderByDescending(r => r.Size.Width * r.Size.Height).FirstOrDefault();
+			_size = largest?.Size ?? Size.Empty;
+			return _size.Value;
 		}
 	}
-	
-	List<IconFrame>? frames;
 
-	public void Create(IEnumerable<IconFrame> frames)
+	IWinUIImage? GetFrameImage(float scale, SizeF? fittingSize)
 	{
-		this.frames = frames.ToList();
-		if (this.frames.Count > 0)
-			Control = Widget.GetFrame(1).Bitmap.ToBitmapSource();
-		
+		if (Frames.FirstOrDefault() == null)
+			return null;
+		var frame = Widget.GetFrame(scale, fittingSize != null ? Size.Ceiling(fittingSize.Value) : null);
+		return frame?.Bitmap?.Handler as IWinUIImage;
 	}
 
-	public IEnumerable<IconFrame> Frames => frames ??= CreateFramesFromControl().ToList();
-	
-	private IEnumerable<IconFrame> CreateFramesFromControl()
-	{
-		if (Control == null)
-			yield break;
-		yield return new IconFrame(1, new Bitmap(new BitmapHandler(Control)));
-	}
+	public BitmapSource? GetImageClosestToSize(float scale, Size? fittingSize) => GetFrameImage(scale, fittingSize)?.GetImageClosestToSize(scale, fittingSize);
+
+	public CanvasBitmap? GetCanvasBitmap(ICanvasResourceCreator creator, float scale, SizeF? fittingSize) => GetFrameImage(scale, fittingSize)?.GetCanvasBitmap(creator, scale, fittingSize);
 }

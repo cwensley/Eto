@@ -1,27 +1,12 @@
-using Microsoft.Graphics.Canvas.Brushes;
-using Microsoft.UI.Xaml.Media;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Eto.WinUI.Drawing;
 
 public class SolidBrushHandler : SolidBrush.IHandler
 {
-	static SolidColorBrush Get(SolidBrush widget) => (SolidColorBrush)widget.ControlObject;
+	static SolidBrushData Get(SolidBrush widget) => (SolidBrushData)widget.ControlObject;
 
-	public Color GetColor(SolidBrush widget)
-	{
-		return Get(widget).Color.ToEto();
-	}
+	public Color GetColor(SolidBrush widget) => Get(widget).Color;
 
-	public void SetColor(SolidBrush widget, Color color)
-	{
-		Get(widget).Color = color.ToWinUI();
-	}
+	public void SetColor(SolidBrush widget, Color color) => Get(widget).Color = color;
 
-	public object Create(Color color)
-	{
-		return new SolidColorBrush(color.ToWinUI());
-	}
+	public object Create(Color color) => new SolidBrushData { Color = color };
 }
