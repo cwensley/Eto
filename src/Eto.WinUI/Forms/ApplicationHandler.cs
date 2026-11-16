@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 namespace Eto.WinUI.Forms;
 
 public class ApplicationHandler : WidgetHandler<mux.Application, Application, Application.ICallback>, Application.IHandler
@@ -26,11 +28,18 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 	public void Attach(object context)
 	{
 		Control = context as mux.Application;
+		InitializeApplication();
+	}
+
+	void InitializeApplication()
+	{
+		_dispatcher ??= mud.DispatcherQueue.GetForCurrentThread();
+		_mainThread = Thread.CurrentThread;
 
 		Control.Resources.MergedDictionaries.Add(
 			new mux.ResourceDictionary
 			{
-				
+
 				Source = new Uri("ms-appx:///Eto.WinUI/Forms/Controls/BindingTemplates.xaml")
 			});
 
@@ -51,13 +60,27 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 			action();
 		else
 		{
-			var mre = new ManualResetEvent(false);
+			Exception? exception = null;
+			using var mre = new ManualResetEvent(false);
 			_dispatcher.TryEnqueue(() =>
 			{
-				action();
-				mre.Set();
+				try
+				{
+					action();
+				}
+				catch (Exception ex)
+				{
+					exception = ex;
+				}
+				finally
+				{
+					mre.Set();
+				}
 			});
 			mre.WaitOne();
+			// rethrow on the calling thread; left on the dispatcher it would end the app instead
+			if (exception != null)
+				ExceptionDispatchInfo.Capture(exception).Throw();
 		}
 	}
 
@@ -82,7 +105,28 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 
 	public void Run()
 	{
-		Callback.OnInitialized(Widget, EventArgs.Empty);
+		if (Control != null)
+		{
+			Callback.OnInitialized(Widget, EventArgs.Empty);
+			return;
+		}
+
+		// No WinUI Application exists yet, so Eto owns startup like a XAML-generated Main would.
+		WinRT.ComWrappersSupport.InitializeComWrappers();
+		mux.Application.Start(p =>
+		{
+			_dispatcher = mud.DispatcherQueue.GetForCurrentThread();
+			SynchronizationContext.SetSynchronizationContext(new mud.DispatcherQueueSynchronizationContext(_dispatcher));
+			Control = new EtoApplication(this);
+		});
+	}
+
+	internal void OnLaunched()
+	{
+		// Eto apps quit explicitly or via the main form, not when the last window closes
+		if (Widget.MainForm == null)
+			Control.DispatcherShutdownMode = mux.DispatcherShutdownMode.OnExplicitShutdown;
+		InitializeApplication();
 	}
 
 	public void RunIteration()
@@ -92,6 +136,35 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 		//Dispatcher.PushFrame(frame);
 		//WpfFrameworkElementHelper.ShouldCaptureMouse = false;
 	}
-	
+
 	public Theme Theme { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+}
+
+/// <summary>
+/// The WinUI application Eto creates when <see cref="Application.Run()"/> is called without one.
+/// </summary>
+partial class EtoApplication : mux.Application, mux.Markup.IXamlMetadataProvider
+{
+	readonly ApplicationHandler _handler;
+	// Eto.WinUI's generated provider also covers WinUI's own controls and the toolkit controls Eto uses.
+	// Created by name as it doesn't exist yet when the XAML compiler first compiles this assembly.
+	readonly mux.Markup.IXamlMetadataProvider _provider = (mux.Markup.IXamlMetadataProvider)Activator.CreateInstance(
+		typeof(EtoApplication).Assembly.GetType("Eto.WinUI.Eto_WinUI_XamlTypeInfo.XamlMetaDataProvider", true)!)!;
+
+	public EtoApplication(ApplicationHandler handler)
+	{
+		_handler = handler;
+	}
+
+	protected override void OnLaunched(mux.LaunchActivatedEventArgs args)
+	{
+		Resources.MergedDictionaries.Add(new muc.XamlControlsResources());
+		_handler.OnLaunched();
+	}
+
+	public mux.Markup.IXamlType GetXamlType(Type type) => _provider.GetXamlType(type);
+
+	public mux.Markup.IXamlType GetXamlType(string fullName) => _provider.GetXamlType(fullName);
+
+	public mux.Markup.XmlnsDefinition[] GetXmlnsDefinitions() => _provider.GetXmlnsDefinitions();
 }
