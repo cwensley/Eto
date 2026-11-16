@@ -140,7 +140,13 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 
 	public void Append(string text, bool scrollToCursor)
 	{
-		Control.Text += text;
+		// insert at the end, as setting Text re-lays out all of it and scrolls back to the top
+		// SelectedText is ignored while read only
+		var readOnly = Control.IsReadOnly;
+		Control.IsReadOnly = false;
+		Control.Select(Control.Text.Length, 0);
+		Control.SelectedText = text;
+		Control.IsReadOnly = readOnly;
 		Control.Select(Control.Text.Length, 0);
 		CheckSelectionChanged();
 		if (scrollToCursor)
@@ -187,11 +193,12 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 
 	public void ScrollToStart()
 	{
-		ScrollViewer?.ChangeView(null, 0, null);
+		ScrollViewer?.ChangeView(null, 0, null, true);
 	}
 
 	public void ScrollToEnd()
 	{
-		ScrollViewer?.ChangeView(null, ScrollViewer.ExtentHeight, null);
+		var scrollViewer = ScrollViewer;
+		scrollViewer?.ChangeView(null, scrollViewer.ExtentHeight, null, true);
 	}
 }
