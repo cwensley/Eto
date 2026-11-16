@@ -116,7 +116,13 @@ public class GridColumnHandler : WidgetHandler<EtoDataGridColumn, GridColumn>, I
 		else if (Widget.Properties.Get<bool>(AutoSize_Key, true))
 			Control.Width = ctk.DataGridLength.Auto;
 		else
-			Control.Width = new ctk.DataGridLength(Widget.Properties.Get(Width_Key, -1));
+		{
+			// turning off auto size without a width keeps the current width, like WPF
+			var width = Widget.Properties.Get(Width_Key, -1);
+			if (width < 0 && IsGridLoaded && Control.ActualWidth > 0)
+				width = (int)Math.Round(Control.ActualWidth);
+			Control.Width = width >= 0 ? new ctk.DataGridLength(width) : ctk.DataGridLength.Auto;
+		}
 	}
 
 	internal void OnLoad()
