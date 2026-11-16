@@ -68,8 +68,9 @@ sealed class WinUIWindowCleanup : IDataConsumer
 				{
 					try
 					{
-						if (window.ControlObject is Microsoft.UI.Xaml.Window native)
-							native.Close();
+						// through Eto, which skips windows already closed; closing a closed native window crashes
+						if (!window.IsDisposed)
+							window.Close();
 					}
 					catch (Exception ex)
 					{

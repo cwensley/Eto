@@ -7,8 +7,8 @@ public class DialogHandler : WinUIWindow<mui.Window, Dialog, Dialog.ICallback>, 
 	readonly muc.Grid _buttonBar = new();
 	readonly muc.Grid _contentGrid = new();
 	Button? _defaultButton;
-	bool _loadedCompleteRaised;
 	bool _isModal;
+	bool _modalDone;
 
 	public DialogHandler()
 	{
@@ -38,7 +38,24 @@ public class DialogHandler : WinUIWindow<mui.Window, Dialog, Dialog.ICallback>, 
 
 		_contentGrid.RowDefinitions.Add(new muc.RowDefinition { Height = new mux.GridLength(1, mux.GridUnitType.Star) });
 		_contentGrid.RowDefinitions.Add(new muc.RowDefinition { Height = mux.GridLength.Auto });
-		Control.Closed += Control_Closed;
+		ContainerControl.KeyDown += Container_KeyDown;
+	}
+
+	void Container_KeyDown(object sender, mux.Input.KeyRoutedEventArgs e)
+	{
+		if (e.Handled)
+			return;
+		var button = e.Key switch
+		{
+			Windows.System.VirtualKey.Escape => AbortButton,
+			Windows.System.VirtualKey.Enter => DefaultButton,
+			_ => null
+		};
+		if (button != null && button.Enabled && button.Visible)
+		{
+			button.PerformClick();
+			e.Handled = true;
+		}
 	}
 
 	public override void SetContainerContent(mui.FrameworkElement content)
@@ -63,10 +80,11 @@ public class DialogHandler : WinUIWindow<mui.Window, Dialog, Dialog.ICallback>, 
 			ownerHandler.Enabled = false;
 
 		_isModal = true;
+		_modalDone = false;
 		try
 		{
-			Control.Activate();
-			Control.DispatcherQueue.RunEventLoop();
+			ShowWindow(true);
+			AsyncWait.RunModalLoop(() => _modalDone);
 		}
 		finally
 		{
@@ -115,25 +133,19 @@ public class DialogHandler : WinUIWindow<mui.Window, Dialog, Dialog.ICallback>, 
 
 	void PrepareToShow()
 	{
-		if (!_loadedCompleteRaised)
-		{
-			Callback.OnLoadComplete(Widget, EventArgs.Empty);
-			_loadedCompleteRaised = true;
-		}
-
 		var owner = Widget.Owner;
-		if (owner != null && !owner.HasFocus)
-			owner.Focus();
-
-		Control.Activate();
+		if (owner != null)
+			SetOwner(owner);
 	}
 
-	void Control_Closed(object sender, mui.WindowEventArgs args)
+	protected override void OnClosed()
 	{
+		base.OnClosed();
 		if (_isModal)
-			Control.DispatcherQueue.TryEnqueue(Control.DispatcherQueue.EnqueueEventLoopExit);
-
-		Callback.OnClosed(Widget, EventArgs.Empty);
+		{
+			_modalDone = true;
+			AsyncWait.Wake();
+		}
 	}
 
 	void ClearButtons()

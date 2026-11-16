@@ -89,8 +89,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	public IEnumerable<string> SupportedPlatformCommands { get; }
 	public Point Location { get; }
 	public string ToolTip { get; set; }
-	public Cursor Cursor { get; set; }
-	public int TabIndex { get; set; }
+	public int TabIndex { get; set; } = int.MaxValue;
 
 	public virtual bool TabStop
 	{
@@ -98,7 +97,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 		set => ContainerControl.IsTabStop = value;
 	}
 
-	public virtual IEnumerable<Control> VisualControls { get; }
+	public virtual IEnumerable<Control> VisualControls => Enumerable.Empty<Control>();
 	public virtual bool AllowDrop
 	{
 		get => ContainerControl.AllowDrop;
@@ -110,12 +109,6 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	static Microsoft.UI.Xaml.Input.Pointer? s_currentPointer;
 
 	public bool CaptureMouse() => s_currentPointer != null && MouseEventElement.CapturePointer(s_currentPointer);
-
-	public virtual void DoDragDrop(DataObject data, DragEffects allowedEffects, Image image, PointF cursorOffset)
-	{
-		// needs DataObject/DataFormats handlers, which WinUI doesn't have yet
-		throw new NotSupportedException("Drag and drop is not supported on WinUI yet");
-	}
 
 	public virtual void Focus()
 	{
@@ -386,7 +379,8 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 				ContainerControl.LostFocus += (sender, e) => Callback.OnLostFocus(Widget, EventArgs.Empty);
 				break;
 			default:
-				base.AttachEvent(id);
+				if (!AttachInputEvent(id))
+					base.AttachEvent(id);
 				break;
 		}
 	}
@@ -469,6 +463,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	MouseEventArgs CreateMouseButtonEventArgs(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e, bool isPressed)
 	{
 		var point = e.GetCurrentPoint(MouseEventElement);
+		SetLastPointerPoint(point);
 		var location = point.Position.ToEto();
 		var buttons = GetChangedMouseButtons(point.Properties.PointerUpdateKind, isPressed);
 		if (buttons == MouseButtons.None)
@@ -480,6 +475,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	MouseEventArgs CreateMouseEventArgs(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
 	{
 		var point = e.GetCurrentPoint(MouseEventElement);
+		SetLastPointerPoint(point);
 		return new MouseEventArgs(
 			GetPressedMouseButtons(point.Properties),
 			GetModifierKeys(e.KeyModifiers),

@@ -11,6 +11,8 @@ public class EtoContentControl : muc.ContentControl
 	public EtoContentControl()
 	{
 		DefaultStyleKey = typeof(EtoContentControl);
+		// it only hosts content, so it shouldn't take the focus itself
+		IsTabStop = false;
 		HorizontalContentAlignment = mux.HorizontalAlignment.Stretch;
 		VerticalContentAlignment = mux.VerticalAlignment.Stretch;
 	}
@@ -56,5 +58,5 @@ public class PanelHandler : WinUIContainer<EtoContentControl, Panel, Panel.ICall
 		set => Control.Background = value.ToWinUIBrush();
 	}
 
-	protected override EtoContentControl CreateControl() => new EtoContentControl();
+	protected override EtoContentControl CreateControl() => new EtoContentControl { Handler = this };
 }

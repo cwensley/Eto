@@ -145,32 +145,29 @@ namespace Eto.WinUI
 			p.Add<AboutDialog.IHandler>(() => new ThemedAboutDialogHandler());
 			p.Add<Application.IHandler>(() => new ApplicationHandler());
 			p.Add<Themes.IHandler>(() => new ThemesHandler());
-			//p.Add<Clipboard.IHandler>(() => new ClipboardHandler());
+			p.Add<Clipboard.IHandler>(() => new ClipboardHandler());
 			p.Add<ColorDialog.IHandler>(() => new ThemedColorDialogHandler());
-			//p.Add<Cursor.IHandler>(() => new CursorHandler());
+			p.Add<Cursor.IHandler>(() => new CursorHandler());
 			p.Add<Dialog.IHandler>(() => new DialogHandler());
 			p.Add<FontDialog.IHandler>(() => new ThemedFontDialogHandler());
 			p.Add<Form.IHandler>(() => new FormHandler());
-			//p.Add<FloatingForm.IHandler>(() => new FloatingFormHandler());
-			// p.Add<MessageBox.IHandler>(() => new ThemedMessageBoxHandler());
-			//p.Add<OpenFileDialog.IHandler>(() => new OpenFileDialogHandler());
-			//p.Add<OpenWithDialog.IHandler>(() => new OpenWithDialogHandler());
+			p.Add<FloatingForm.IHandler>(() => new FloatingFormHandler());
+			p.Add<MessageBox.IHandler>(() => new MessageBoxHandler());
+			p.Add<OpenFileDialog.IHandler>(() => new OpenFileDialogHandler());
+			p.Add<OpenWithDialog.IHandler>(() => new OpenWithDialogHandler());
 			//p.Add<PixelLayout.IHandler>(() => new PixelLayoutHandler());
-			//p.Add<SaveFileDialog.IHandler>(() => new SaveFileDialogHandler());
-			//if (Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialog.IsPlatformSupported)
-			//	p.Add<SelectFolderDialog.IHandler>(() => new VistaSelectFolderDialogHandler());
-			//else
-			//	p.Add<SelectFolderDialog.IHandler>(() => new SelectFolderDialogHandler());
+			p.Add<SaveFileDialog.IHandler>(() => new SaveFileDialogHandler());
+			p.Add<SelectFolderDialog.IHandler>(() => new SelectFolderDialogHandler());
 			p.Add<TableLayout.IHandler>(() => new TableLayoutHandler());
-			//p.Add<UITimer.IHandler>(() => new UITimerHandler());
+			p.Add<UITimer.IHandler>(() => new UITimerHandler());
 			p.Add<Mouse.IHandler>(() => new MouseHandler());
 			p.Add<Screen.IScreensHandler>(() => new ScreensHandler());
-			//p.Add<Keyboard.IHandler>(() => new KeyboardHandler());
+			p.Add<Keyboard.IHandler>(() => new KeyboardHandler());
 			p.Add<FixedMaskedTextProvider.IHandler>(() => new Eto.Shared.Forms.FixedMaskedTextProviderHandler());
 			p.Add<TrayIndicator.IHandler>(() => new TrayIndicatorHandler());
 			p.Add<Notification.IHandler>(() => new NotificationHandler());
-			//p.Add<DataObject.IHandler>(() => new DataObjectHandler());
-			//p.Add<DataFormats.IHandler>(() => new DataFormatsHandler());
+			p.Add<DataObject.IHandler>(() => new DataObjectHandler());
+			p.Add<DataFormats.IHandler>(() => new DataFormatsHandler());
 			p.Add<Taskbar.IHandler>(() => new TaskbarHandler());
 			//p.Add<Window.IWindowHandler>(() => new WindowHandler());
 
