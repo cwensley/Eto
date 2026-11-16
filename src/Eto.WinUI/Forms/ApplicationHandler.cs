@@ -10,6 +10,8 @@ public class ApplicationHandler : WidgetHandler<mux.Application, Application, Ap
 	public Keys AlternateModifier => Keys.Alt;
 	public string? BadgeLabel { get; set; }
 	public bool IsActive { get; }
+	public Theme CurrentTheme { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
 
 	public ApplicationHandler()
 	{

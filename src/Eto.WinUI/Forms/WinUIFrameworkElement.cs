@@ -79,7 +79,7 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 	public abstract Color BackgroundColor { get; set; }
 
 
-	public virtual bool Enabled { get; set; }
+	public virtual bool Enabled { get; set; } = true;
 	public virtual bool HasFocus => ContainerControl.FocusState != mux.FocusState.Unfocused;
 	public virtual bool Visible
 	{
@@ -162,13 +162,36 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	public virtual PointF PointFromScreen(PointF point)
 	{
-		throw new NotImplementedException();
+		if (!Widget.Loaded)
+			return point;
+
+		var root = ContainerControl.XamlRoot?.Content as mux.UIElement;
+		if (root == null)
+			return point;
+
+		var windowPosition = GetWindowScreenPosition();
+		if (windowPosition == null)
+			return point;
+
+		var rootPoint = point - ScreenHandler.PhysicalToLogical(windowPosition.Value);
+		return root.TransformToVisual(ContainerControl).TransformPoint(rootPoint.ToWinUI()).ToEto();
 	}
 
 	public virtual PointF PointToScreen(PointF point)
 	{
-		throw new NotImplementedException();
-		//ContainerControl.TransformToVisual()
+		if (!Widget.Loaded)
+			return point;
+
+		var root = ContainerControl.XamlRoot?.Content as mux.UIElement;
+		if (root == null)
+			return point;
+
+		var windowPosition = GetWindowScreenPosition();
+		if (windowPosition == null)
+			return point;
+
+		var rootPoint = ContainerControl.TransformToVisual(root).TransformPoint(point.ToWinUI()).ToEto();
+		return ScreenHandler.PhysicalToLogical(windowPosition.Value) + rootPoint;
 	}
 
 	public void ReleaseMouseCapture()
@@ -314,17 +337,217 @@ public abstract partial class WinUIFrameworkElement<TControl, TWidget, TCallback
 
 	protected virtual mux.FrameworkElement MouseEventElement => ContainerControl;
 
-	public ContextMenu ContextMenu { get; set; }
+	ContextMenu _contextMenu;
+	public ContextMenu ContextMenu
+	{
+		get => _contextMenu;
+		set
+		{
+			_contextMenu = value;
+			ContainerControl.ContextFlyout = value?.ControlObject as muc.MenuFlyout;
+		}
+	}
 
 	public override void AttachEvent(string id)
 	{
 		switch (id)
 		{
 			case Eto.Forms.Control.MouseDownEvent:
-				//MouseEventElement.
+				MouseEventElement.PointerPressed += HandlePointerPressed;
+				HandleEvent(Eto.Forms.Control.MouseUpEvent);
+				break;
+			case Eto.Forms.Control.MouseUpEvent:
+				MouseEventElement.PointerReleased += HandlePointerReleased;
+				HandleEvent(Eto.Forms.Control.MouseDownEvent);
+				break;
+			case Eto.Forms.Control.MouseMoveEvent:
+				MouseEventElement.PointerMoved += HandlePointerMoved;
+				break;
+			case Eto.Forms.Control.MouseEnterEvent:
+				MouseEventElement.PointerEntered += HandlePointerEntered;
+				break;
+			case Eto.Forms.Control.MouseLeaveEvent:
+				HandleEvent(Eto.Forms.Control.MouseEnterEvent);
+				MouseEventElement.PointerExited += HandlePointerExited;
+				break;
+			case Eto.Forms.Control.MouseWheelEvent:
+				MouseEventElement.PointerWheelChanged += HandlePointerWheelChanged;
+				break;
+			case Eto.Forms.Control.MouseDoubleClickEvent:
+				MouseEventElement.DoubleTapped += HandleDoubleTapped;
+				break;
+			case Eto.Forms.Control.GotFocusEvent:
+				ContainerControl.GotFocus += (sender, e) => Callback.OnGotFocus(Widget, EventArgs.Empty);
+				break;
+			case Eto.Forms.Control.LostFocusEvent:
+				ContainerControl.LostFocus += (sender, e) => Callback.OnLostFocus(Widget, EventArgs.Empty);
+				break;
+			default:
+				base.AttachEvent(id);
 				break;
 		}
-		base.AttachEvent(id);
+	}
+
+	void HandlePointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseButtonEventArgs(e, isPressed: true);
+		Callback.OnMouseDown(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandlePointerReleased(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseButtonEventArgs(e, isPressed: false);
+		Callback.OnMouseUp(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandlePointerMoved(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseEventArgs(e);
+		Callback.OnMouseMove(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandlePointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseEventArgs(e);
+		Callback.OnMouseEnter(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandlePointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseEventArgs(e);
+		Callback.OnMouseLeave(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandlePointerWheelChanged(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = CreateMouseWheelEventArgs(e);
+		Callback.OnMouseWheel(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	void HandleDoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+	{
+		if (Control == null)
+			return;
+
+		var args = new MouseEventArgs(
+			MouseButtons.Primary,
+			GetModifierKeys(),
+			e.GetPosition(MouseEventElement).ToEto());
+		Callback.OnMouseDoubleClick(Widget, args);
+		e.Handled = args.Handled;
+	}
+
+	MouseEventArgs CreateMouseButtonEventArgs(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e, bool isPressed)
+	{
+		var point = e.GetCurrentPoint(MouseEventElement);
+		var location = point.Position.ToEto();
+		var buttons = GetChangedMouseButtons(point.Properties.PointerUpdateKind, isPressed);
+		if (buttons == MouseButtons.None)
+			buttons = GetPressedMouseButtons(point.Properties);
+
+		return new MouseEventArgs(buttons, GetModifierKeys(e.KeyModifiers), location, pressure: GetPressure(point));
+	}
+
+	MouseEventArgs CreateMouseEventArgs(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		var point = e.GetCurrentPoint(MouseEventElement);
+		return new MouseEventArgs(
+			GetPressedMouseButtons(point.Properties),
+			GetModifierKeys(e.KeyModifiers),
+			point.Position.ToEto(),
+			pressure: GetPressure(point));
+	}
+
+	MouseEventArgs CreateMouseWheelEventArgs(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		var point = e.GetCurrentPoint(MouseEventElement);
+		return new MouseEventArgs(
+			GetPressedMouseButtons(point.Properties),
+			GetModifierKeys(e.KeyModifiers),
+			point.Position.ToEto(),
+			new SizeF(0, point.Properties.MouseWheelDelta / WinUIConversions.WheelDelta),
+			GetPressure(point));
+	}
+
+	static MouseButtons GetPressedMouseButtons(Microsoft.UI.Input.PointerPointProperties properties)
+	{
+		var buttons = MouseButtons.None;
+		if (properties.IsLeftButtonPressed)
+			buttons |= MouseButtons.Primary;
+		if (properties.IsRightButtonPressed)
+			buttons |= MouseButtons.Alternate;
+		if (properties.IsMiddleButtonPressed)
+			buttons |= MouseButtons.Middle;
+		return buttons;
+	}
+
+	static MouseButtons GetChangedMouseButtons(Microsoft.UI.Input.PointerUpdateKind updateKind, bool isPressed)
+	{
+		return updateKind switch
+		{
+			Microsoft.UI.Input.PointerUpdateKind.LeftButtonPressed when isPressed => MouseButtons.Primary,
+			Microsoft.UI.Input.PointerUpdateKind.LeftButtonReleased when !isPressed => MouseButtons.Primary,
+			Microsoft.UI.Input.PointerUpdateKind.RightButtonPressed when isPressed => MouseButtons.Alternate,
+			Microsoft.UI.Input.PointerUpdateKind.RightButtonReleased when !isPressed => MouseButtons.Alternate,
+			Microsoft.UI.Input.PointerUpdateKind.MiddleButtonPressed when isPressed => MouseButtons.Middle,
+			Microsoft.UI.Input.PointerUpdateKind.MiddleButtonReleased when !isPressed => MouseButtons.Middle,
+			_ => MouseButtons.None
+		};
+	}
+
+	static float GetPressure(Microsoft.UI.Input.PointerPoint point)
+	{
+		var pressure = point.Properties.Pressure;
+		return pressure > 0 ? pressure : 1f;
+	}
+
+	static Keys GetModifierKeys() => Keys.None;
+
+	static Keys GetModifierKeys(Windows.System.VirtualKeyModifiers modifiers)
+	{
+		var keys = Keys.None;
+		if (modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control))
+			keys |= Keys.Control;
+		if (modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift))
+			keys |= Keys.Shift;
+		if (modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Menu))
+			keys |= Keys.Alt;
+		if (modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Windows))
+			keys |= Keys.Application;
+		return keys;
+	}
+
+	PointF? GetWindowScreenPosition()
+	{
+		if (Widget.ParentWindow?.Handler is not IWinUIWindow window)
+			return null;
+
+		var position = window.Control.AppWindow.Position;
+		return new PointF(position.X, position.Y);
 	}
 
 }

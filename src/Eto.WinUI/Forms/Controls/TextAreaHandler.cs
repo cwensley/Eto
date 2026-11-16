@@ -4,15 +4,20 @@ namespace Eto.WinUI.Forms.Controls;
 
 public class EtoTextBox : muc.TextBox
 {
-	public IWinUIFrameworkElement Handler { get; set; }
+	public IWinUIFrameworkElement? Handler { get; set; }
 
 	protected override wf.Size MeasureOverride(wf.Size availableSize)
 	{
 		return Handler?.MeasureOverride(availableSize, base.MeasureOverride) ?? base.MeasureOverride(availableSize);
 	}
 }
+
 public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICallback>, TextArea.IHandler
 {
+	protected override sw.Size DefaultSize => new sw.Size(100, 60);
+
+	protected override bool PreventUserResize => true;
+
 	public bool ReadOnly
 	{
 		get => Control.IsReadOnly;
@@ -80,6 +85,7 @@ public class TextAreaHandler : WinUIControl<muc.TextBox, TextArea, TextArea.ICal
 	{
 		base.Initialize();
 		Control.AcceptsReturn = true;
+		UserPreferredSize = DefaultSize;
 	}
 
 	public override void AttachEvent(string id)

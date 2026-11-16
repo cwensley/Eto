@@ -1,8 +1,10 @@
+
 namespace Eto.WinUI.Forms.Controls;
+
 
 public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallback>, TextBox.IHandler, SearchBox.IHandler
 {
-	int TextLength => Control.Text?.Length ?? 0;
+	protected override bool PreventUserResize => true;
 
 	public bool ReadOnly
 	{
@@ -59,16 +61,23 @@ public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallba
 		set => Control.SelectionHighlightColorWhenNotFocused = value ? Control.SelectionHighlightColor : null;
 	}
 
-	public int GetCharacterIndex(PointF location)
+	public int GetCharacterIndex(PointF location) => GetCharacterIndex(Control, location);
+
+	public PaddingF TextInset => GetTextInset(Control);
+
+	public void SelectAll() => Control.SelectAll();
+
+	/// <summary>Gets the insertion index nearest to <paramref name="location"/>, in the text box's own coordinates.</summary>
+	internal static int GetCharacterIndex(muc.TextBox textBox, PointF location)
 	{
-		var length = TextLength;
+		var length = textBox.Text?.Length ?? 0;
 		if (length == 0)
 			return 0;
 
-		if (location.X <= GetInsertionX(0))
+		if (location.X <= GetInsertionX(textBox, 0, length))
 			return 0;
 
-		if (location.X >= GetInsertionX(length))
+		if (location.X >= GetInsertionX(textBox, length, length))
 			return length;
 
 		var low = 0;
@@ -76,7 +85,7 @@ public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallba
 		while (low < high)
 		{
 			var mid = (low + high) / 2;
-			if (location.X <= GetInsertionX(mid))
+			if (location.X <= GetInsertionX(textBox, mid, length))
 				high = mid;
 			else
 				low = mid + 1;
@@ -84,35 +93,32 @@ public class TextBoxHandler : WinUIControl<muc.TextBox, TextBox, TextBox.ICallba
 
 		var right = low;
 		var left = Math.Max(0, right - 1);
-		return Math.Abs(location.X - GetInsertionX(left)) <= Math.Abs(GetInsertionX(right) - location.X) ? left : right;
+		return Math.Abs(location.X - GetInsertionX(textBox, left, length)) <= Math.Abs(GetInsertionX(textBox, right, length) - location.X) ? left : right;
 	}
 
 	// the text is laid out inside the border and padding of the default template
-	public PaddingF TextInset
+	internal static PaddingF GetTextInset(muc.TextBox textBox)
 	{
-		get
-		{
-			var border = Control.BorderThickness;
-			var padding = Control.Padding;
-			return new PaddingF(
-				(float)(border.Left + padding.Left),
-				(float)(border.Top + padding.Top),
-				(float)(border.Right + padding.Right),
-				(float)(border.Bottom + padding.Bottom)
-			);
-		}
+		var border = textBox.BorderThickness;
+		var padding = textBox.Padding;
+		return new PaddingF(
+			(float)(border.Left + padding.Left),
+			(float)(border.Top + padding.Top),
+			(float)(border.Right + padding.Right),
+			(float)(border.Bottom + padding.Bottom)
+		);
 	}
 
-	public void SelectAll() => Control.SelectAll();
-
-	double GetInsertionX(int index)
+	static double GetInsertionX(muc.TextBox textBox, int index, int length)
 	{
 		if (index <= 0)
-			return Control.GetRectFromCharacterIndex(0, false).Left;
-		if (index >= TextLength)
-			return Control.GetRectFromCharacterIndex(TextLength - 1, true).Right;
-		return Control.GetRectFromCharacterIndex(index, false).Left;
+			return textBox.GetRectFromCharacterIndex(0, false).Left;
+		if (index >= length)
+			return textBox.GetRectFromCharacterIndex(length - 1, true).Right;
+		return textBox.GetRectFromCharacterIndex(index, false).Left;
 	}
+
+	protected override wf.Size DefaultSize => new wf.Size(100, Control.MinHeight);
 
 	protected override muc.TextBox CreateControl() => new EtoTextBox { Handler = this };
 

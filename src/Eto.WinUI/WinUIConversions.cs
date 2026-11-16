@@ -1,3 +1,5 @@
+using Eto.WinUI.Drawing;
+
 namespace Eto.WinUI;
 
 public static class WinUIConversions
@@ -188,6 +190,12 @@ public static class WinUIConversions
 		_ => TextAlignment.Left
 	};
 
+	public static muxm.Imaging.BitmapSource ToBitmapSource(this Bitmap bitmap)
+	{
+		var handler = (BitmapHandler)bitmap.Handler;
+		return handler.Control;
+	}
+	
 	/*
 	public static KeyEventArgs ToEto(this swi.KeyEventArgs e, KeyEventType keyType)
 	{

@@ -2,7 +2,7 @@ namespace Eto.WinUI.Forms.Controls;
 
 public class CheckBoxHandler : WinUIControl<muc.CheckBox, CheckBox, CheckBox.ICallback>, CheckBox.IHandler
 {
-	public string Text
+	public string? Text
 	{
 		get => Control.Content as string;
 		set => Control.Content = value;

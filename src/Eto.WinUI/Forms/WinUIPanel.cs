@@ -7,8 +7,8 @@ public abstract class WinUIPanel<TControl, TWidget, TCallback> : WinUIContainer<
 	where TWidget : Panel
 	where TCallback : Panel.ICallback
 {
-	Control _content;
-	public virtual Control Content
+	Control? _content;
+	public virtual Control? Content
 	{
 		get => _content;
 		set
@@ -16,7 +16,7 @@ public abstract class WinUIPanel<TControl, TWidget, TCallback> : WinUIContainer<
 			if (_content != value)
 			{
 				_content = value;
-				_border.Child = _content.ToNative();
+				_border.Content = _content.ToNative();
 			}
 		}
 	}
@@ -31,13 +31,13 @@ public abstract class WinUIPanel<TControl, TWidget, TCallback> : WinUIContainer<
 		set => ContainerControl.SetMinSize(value);
 	}
 
-	EtoDockPanel _border;
+	EtoContentControl _border;
 
 	public WinUIPanel()
 	{
-		_border = new EtoDockPanel { Handler = this };
+		_border = new EtoContentControl { Handler = this };
 	}
-	public override mux.FrameworkElement ContainerControl => _border;
+	//public override mux.FrameworkElement ContainerControl => _border;
 
 	protected override void Initialize()
 	{
