@@ -93,7 +93,7 @@ public class Platform : Eto.Platform
 // 		p.Add<NumericStepper.IHandler>(() => new NumericStepperHandler());
 		p.Add<Panel.IHandler>(() => new PanelHandler());
 // 		p.Add<PasswordBox.IHandler>(() => new PasswordBoxHandler());
-// 		p.Add<ProgressBar.IHandler>(() => new ProgressBarHandler());
+		p.Add<ProgressBar.IHandler>(() => new ProgressBarHandler());
 		p.Add<RadioButton.IHandler>(() => new RadioButtonHandler());
 		p.Add<Scrollable.IHandler>(() => new ScrollableHandler());
 		p.Add<SearchBox.IHandler>(() => new SearchBoxHandler());
